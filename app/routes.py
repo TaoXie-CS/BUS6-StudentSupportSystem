@@ -1,8 +1,13 @@
-from flask import render_template, redirect, url_for, flash, request
+import os
+from datetime import datetime
+
+from flask import render_template, redirect, url_for, flash, request, current_app, json
+from werkzeug.utils import secure_filename, send_from_directory
+
 from app import app
 from app import db
 from app.models import SupportMessage
-from app.forms import SupportMessageForm
+from app.forms import SupportMessageForm, TeacherUpload
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -121,3 +126,73 @@ def more_search():
         order=sort_by,
         results1_final=avg_priority_final
     )
+
+@app.route('/upload', methods=['GET', 'POST'])
+def file_upload():
+    # create an object for your upload form
+    form = TeacherUpload()
+    filename = None
+    # create the path for the json file to write uploads to
+    file_path = os.path.join(
+        current_app.root_path, 'static', 'uploads.json')
+    try:
+        with open(file_path, "r") as file:
+            feedback_store = json.load(file)
+    except FileNotFoundError:
+        feedback_store = []
+
+    # grab the upload and save to json file
+    if form.validate_on_submit():
+        upload_data = {
+            "teacher_name": form.teacher_name.data,
+            "course_name": form.course_name.data,
+            "remark": form.remark.data,
+            "filename": filename,
+            "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        feedback_store.append(upload_data )
+        with open(file_path, "w") as file:
+            json.dump(feedback_store, file, indent=4)
+        # get the file to upload / attach and upload the file to uploads /
+        file = form.file.data
+        # the if handles the uploading, after the if we prepare for the listing files and downloading
+        if file:
+            filename = secure_filename(file.filename) # secure_filename is used to make sure the file is safe to store on the browser
+            uploaded_folder = current_app.config['UPLOAD_FOLDER'] # to give Flask the current_app that is handling this request
+            file.save(os.path.join(uploaded_folder, filename))
+            flash("File uploaded successfully!")
+            return redirect(url_for("file_upload", filename=filename))
+    # for the downloading of a file, get all the files that must be listed
+    uploaded_folder = current_app.config['UPLOAD_FOLDER']
+    #files = os.listdir(uploaded_folder)
+    #files list ignore gitkeep
+    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+    # download the file that has just been uploaded
+    filename = request.args.get('filename')
+    # this render_template works for both submitting the form, uploads and downloads
+    return render_template("upload.html", form=form, filename=filename, files=files)
+
+"""
+Clicking the Download link triggers a GET request with the filename in the URL. 
+Flask passes this filename to the download_file route, which returns the file to the browser as a download.
+"""
+@app.route('/uploads/<filename>')
+def download_file(filename):
+    uploaded_folder = current_app.config['UPLOAD_FOLDER']
+    return send_from_directory(
+        uploaded_folder,
+        filename,
+        as_attachment=True)
+
+# choose a file to download from the list of files that have been uploaded previously
+@app.route('/downloads')
+def downloads():
+    uploaded_folder = current_app.config['UPLOAD_FOLDER']
+    #files = os.listdir(uploaded_folder)
+    # files list ignore gitkeep
+    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+    files.sort(reverse=True)
+    return render_template('downloads.html', files=files)
+
+
+
