@@ -6,7 +6,7 @@ from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
 
 
-# Message submit form
+# Support Message Submission Form (Core business form)
 class SupportMessageForm(FlaskForm):
 
     course_name = StringField(
@@ -25,7 +25,6 @@ class SupportMessageForm(FlaskForm):
         ]
     )
 
-
     message_content = TextAreaField(
         "Message Content",
         validators=[
@@ -34,7 +33,7 @@ class SupportMessageForm(FlaskForm):
         ]
     )
 
-    # Priority（1-10，default=5）
+    # Priority level (1-10, default value = 5)
     priority = IntegerField(
         "Priority (1-10)",
         validators=[
@@ -52,7 +51,7 @@ class SupportMessageForm(FlaskForm):
         ]
     )
 
-    # Publish date（default=today）
+    # Publish date (default value = current date)
     publish_date = DateField(
         "Publish Date",
         format="%Y-%m-%d",
@@ -60,7 +59,7 @@ class SupportMessageForm(FlaskForm):
         validators=[DataRequired(message="Publish date is required")]
     )
 
-    # Deadline（default=today）
+    # Deadline date (default value = current date)
     deadline = DateField(
         "Deadline",
         format="%Y-%m-%d",
@@ -71,6 +70,7 @@ class SupportMessageForm(FlaskForm):
     submit = SubmitField("Submit Support Message")
 
 
+# Teacher File Upload Form
 class TeacherUpload(FlaskForm):
 
     teacher_name = StringField(
@@ -78,18 +78,15 @@ class TeacherUpload(FlaskForm):
         validators=[DataRequired()]
     )
 
-
     course_name = StringField(
         "Course Name",
         validators=[DataRequired()]
     )
 
-
     remark = TextAreaField(
         "Remark (optional)",
         validators=[Length(max=150)]
     )
-
 
     file = FileField(
         "Upload File (PDF, DOCX, ZIP, JPG, PNG)",
@@ -99,5 +96,59 @@ class TeacherUpload(FlaskForm):
         ]
     )
 
-
     submit = SubmitField("Upload File")
+
+class SurveyForm(FlaskForm):
+    # Grade selection dropdown (consistent with existing field naming/validation style)
+    grade = SelectField(
+        "Your Grade",
+        choices=[
+            ("", "Please select your grade"),  # Placeholder prompt
+            ("Junior 1", "Junior 1"),
+            ("Junior 2", "Junior 2"),
+            ("Junior 3", "Junior 3"),
+            ("Senior 1", "Senior 1"),
+            ("Senior 2", "Senior 2"),
+            ("Senior 3", "Senior 3")
+        ],
+        validators=[
+            DataRequired(message="Grade is required")  # Validation message consistent with existing style
+        ]
+    )
+
+    # Gender selection (radio buttons)
+    gender = RadioField(
+        "Your Gender",
+        choices=[("Male", "Male"), ("Female", "Female")],
+        validators=[
+            DataRequired(message="Gender is required")
+        ]
+    )
+
+    # Teaching satisfaction rating dropdown
+    teaching_quality = SelectField(
+        "Teaching Satisfaction Rating",
+        choices=[
+            ("", "Please rate teaching quality"),
+            ("5", "5 - Very Satisfied"),
+            ("4", "4 - Satisfied"),
+            ("3", "3 - Average"),
+            ("2", "2 - Dissatisfied"),
+            ("1", "1 - Very Dissatisfied")
+        ],
+        validators=[
+            DataRequired(message="Teaching satisfaction rating is required")
+        ]
+    )
+
+    # Additional feedback (optional, consistent with TeacherUpload's remark style)
+    feedback = TextAreaField(
+        "Additional Feedback (optional)",
+        validators=[
+            Length(max=1000, message="Feedback cannot exceed 1000 characters")
+        ],
+        render_kw={"placeholder": "Enter your suggestions or comments here"}
+    )
+
+    # Submit button (consistent naming style with existing buttons)
+    submit = SubmitField("Submit Survey")

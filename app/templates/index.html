@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <!-- Flash message (Success/Error) -->
+    <!-- Flash Messages (Success/Error Notifications) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -20,11 +20,11 @@
 
     <h1>Welcome to the Student Support App</h1>
 
-    <!-- Message submit form -->
+    <!-- Support Message Submission Form -->
     <form action='' method="post" novalidate style="max-width: 600px; margin-bottom: 30px;">
         {{ form.hidden_tag() }}
 
-        <!-- Course name -->
+        <!-- Course Name Field -->
         <p style="margin: 10px 0;">
             {{ form.course_name.label }}<br>
             {{ form.course_name(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
@@ -33,7 +33,7 @@
             {% endfor %}
         </p>
 
-        <!-- Message subject -->
+        <!-- Message Title Field -->
         <p style="margin: 10px 0;">
             {{ form.message_title.label }}<br>
             {{ form.message_title(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
@@ -42,7 +42,7 @@
             {% endfor %}
         </p>
 
-        <!-- Message body -->
+        <!-- Message Content Field -->
         <p style="margin: 10px 0;">
             {{ form.message_content.label }}<br>
             {{ form.message_content(rows=4, cols=60, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
@@ -51,7 +51,7 @@
             {% endfor %}
         </p>
 
-        <!-- Priority -->
+        <!-- Priority Field -->
         <p style="margin: 10px 0;">
             {{ form.priority.label }} (1-10)<br>
             {{ form.priority(size=10, style="padding: 8px; margin-top: 5px;") }}<br>
@@ -60,7 +60,7 @@
             {% endfor %}
         </p>
 
-        <!-- Teacher's email address -->
+        <!-- Teacher Email Field -->
         <p style="margin: 10px 0;">
             {{ form.teacher_email.label }}<br>
             {{ form.teacher_email(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
@@ -69,7 +69,7 @@
             {% endfor %}
         </p>
 
-        <!-- Publish date -->
+        <!-- Publish Date Field -->
         <p style="margin: 10px 0;">
             {{ form.publish_date.label }}<br>
             {{ form.publish_date(style="padding: 8px; margin-top: 5px;") }}<br>
@@ -78,7 +78,7 @@
             {% endfor %}
         </p>
 
-        <!-- Deadline -->
+        <!-- Deadline Date Field -->
         <p style="margin: 10px 0;">
             {{ form.deadline.label }}<br>
             {{ form.deadline(style="padding: 8px; margin-top: 5px;") }}<br>
@@ -92,7 +92,7 @@
         </p>
     </form>
 
-    <!-- List of submitted messages -->
+    <!-- List of Submitted Support Messages -->
     <h2>All Support Messages</h2>
     {% if student_infos %}
         <ul style="list-style: none; padding: 0; max-width: 800px;">
@@ -112,11 +112,32 @@
         <p>No support messages added yet.</p>
     {% endif %}
 
-    <!-- Links -->
+    <!-- Navigation Links -->
     <div style="margin-top: 20px;">
         <a href="{{ url_for('listing_messages') }}">View All Messages (Sorted by Priority)</a> |
         <a href="{{ url_for('search_messages') }}">Search Messages</a> |
-        <a href="{{ url_for('more_search') }}">Advanced Search</a>
-        <a href="{{ url_for('file_upload') }}">File Upload</a>
+        <a href="{{ url_for('more_search') }}">Advanced Search</a> |  <!-- ========== Modified: Add | separator ========== -->
+        <a href="{{ url_for('file_upload') }}">File Upload</a> |        <!-- ========== Modified: Add | separator ========== -->
+        <a href="{{ url_for('survey') }}">Survey</a>  <!-- Added: Survey entry link -->
     </div>
+
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+    <!-- Survey Results Title -->
+    <h2>Teaching Quality Survey Results</h2>
+
+    <!-- Simple Statistics Module: Total Submissions + Average Rating -->
+    <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; max-width: 600px;">
+        <p><strong>Total Survey Submissions:</strong> {{ survey_total or 0 }}</p>
+        <p><strong>Average Satisfaction Rating:</strong> {{ survey_avg or 0 }} / 5</p>
+    </div>
+
+    <!-- View Detailed Results Button -->
+    <div style="margin: 10px 0;">
+        <a href="{{ url_for('survey_results') }}" style="padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">
+            View Detailed Survey Results
+        </a>
+    </div>
+
 {% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Teaching Quality Survey</h1>
+
+    {# Core Requirement: Form must include method="post", otherwise it uses GET by default #}
+    <form method="post" novalidate>
+        {{ form.hidden_tag() }}  {# Mandatory: CSRF protection, otherwise POST requests will be blocked #}
+
+        {# 1. Grade Field #}
+        <div>
+            <label>1. Your Grade *</label>
+            {{ form.grade }}  {# Native rendering, no custom styling #}
+            {# Display validation errors #}
+            {% for error in form.grade.errors %}
+                <span>{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {# 2. Gender Field #}
+        <div>
+            <label>2. Your Gender *</label>
+            {% for subfield in form.gender %}
+                {{ subfield }} {{ subfield.label }}
+            {% endfor %}
+            {# Display validation errors #}
+            {% for error in form.gender.errors %}
+                <span>{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {# 3. Teaching Quality Rating #}
+        <div>
+            <label>3. Teaching Satisfaction Rating *</label>
+            {{ form.teaching_quality }}  {# Native rendering, no custom styling #}
+            {# Display validation errors #}
+            {% for error in form.teaching_quality.errors %}
+                <span>{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {# 4. Additional Feedback (Optional) #}
+        <div>
+            <label>4. Additional Feedback (Optional)</label>
+            {{ form.feedback }}  {# Native rendering, no custom styling #}
+        </div>
+
+        {# Submit Button #}
+        <div>
+            {{ form.submit }}
+        </div>
+    </form>
+{% endblock %}
