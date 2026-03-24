@@ -1,7 +1,8 @@
 from datetime import date
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, SelectMultipleField
-from wtforms.validators import DataRequired, Length, Email, NumberRange
+from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, \
+    SelectMultipleField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo
 from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
 
@@ -152,3 +153,25 @@ class SurveyForm(FlaskForm):
 
     # Submit button (consistent naming style with existing buttons)
     submit = SubmitField("Submit Survey")
+
+#Registration
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(max=64)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+
+    role = SelectField(
+        "Role",
+        choices=[("student", "Student"), ("teacher", "Teacher")],
+        validators=[DataRequired()]
+    )
+
+    submit = SubmitField('Register')
+
+#  Login
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember = BooleanField('Remember Me')
+    submit = SubmitField('Login')

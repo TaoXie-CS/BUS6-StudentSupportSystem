@@ -10,17 +10,63 @@ from app.models import SupportMessage, SurveyResponse
 from app.forms import SupportMessageForm, TeacherUpload, SurveyForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
+from flask_login import login_user, current_user, logout_user, login_required
+from app.models import User
+from app.forms import RegistrationForm, LoginForm
 
+# Register
+@app.route("/register", methods=['GET','POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            role=form.role.data
+        )
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
+
+# Login
+@app.route("/login", methods=['GET','POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            login_user(user, remember=form.remember.data)
+            return redirect(url_for('index'))
+        flash("Login failed")
+    return render_template('login.html', form=form)
+
+# Logout
+@app.route("/logout")
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 # Home page: submit and display all messages
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     form = SupportMessageForm()
 
     if form.validate_on_submit():
+        #Only teachers could create message
+        if current_user.role != "teacher":
+            flash("Only teachers can post messages", "danger")
+            return redirect(url_for('index'))
         try:
             # Create a support message record
             support_msg = SupportMessage(
+                user_id=current_user.id,
                 course_name=form.course_name.data.strip(),
                 message_title=form.message_title.data.strip(),
                 message_content=form.message_content.data.strip(),
@@ -58,6 +104,7 @@ def index():
     # ========== Modified: Pass survey_total/survey_avg to template ==========
     return render_template(
         'index.html',
+        current_user=current_user,
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
@@ -67,6 +114,7 @@ def index():
 
 # List page: Display all messages in descending order of priority
 @app.route('/listing', methods=['GET', 'POST'])
+@login_required
 def listing_messages():
     # In descending order of priority (with high priority first)
     messages = SupportMessage.query.order_by(SupportMessage.priority.desc()).all()
@@ -77,6 +125,7 @@ def listing_messages():
 
 # Search page: Search for messages by teacher email
 @app.route('/searching', methods=['GET', 'POST'])
+@login_required
 def search_messages():
     email = request.args.get("email", "").strip().lower()
     course_name = request.args.get("course_name", "").strip().lower()
@@ -108,6 +157,7 @@ def search_messages():
 
 # Advanced search: by priority/ranking/average score (priority)
 @app.route('/more_searching', methods=['GET', 'POST'])
+@login_required
 def more_search():
     query = SupportMessage.query
     # Filter by priority (high/medium/low)
@@ -150,7 +200,12 @@ def more_search():
 
 
 @app.route('/upload', methods=['GET', 'POST'])
+@login_required
 def file_upload():
+    #Only teachers can upload
+    if current_user.role != "teacher":
+        flash("Only teachers can upload files", "danger")
+        return redirect(url_for('index'))
     # Create an object for upload form
     form = TeacherUpload()
     filename = None
@@ -202,16 +257,19 @@ Flask passes this filename to the download_file route, which returns the file to
 
 
 @app.route('/uploads/<filename>')
+@login_required
 def download_file(filename):
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
     return send_from_directory(
         uploaded_folder,
         filename,
-        as_attachment=True)
+        as_attachment=True,
+        environ=request.environ)
 
 
 # Choose a file to download from uploaded files list
 @app.route('/downloads')
+@login_required
 def downloads():
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
     # List all files (exclude .gitkeep) and sort in reverse order

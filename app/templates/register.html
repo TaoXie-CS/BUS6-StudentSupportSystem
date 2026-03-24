@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Register</h1>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <p>
+        {{ form.username.label }}<br>
+        {{ form.username(size=64, style="width: 100%; padding: 8px;") }}
+        {% for error in form.username.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.email.label }}<br>
+        {{ form.email(size=64, style="width: 100%; padding: 8px;") }}
+        {% for error in form.email.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.password.label }}<br>
+        {{ form.password(size=64, style="width: 100%; padding: 8px;") }}
+        {% for error in form.password.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.confirm_password.label }}<br>
+        {{ form.confirm_password(size=64, style="width: 100%; padding: 8px;") }}
+        {% for error in form.confirm_password.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.role.label }}<br>
+        {{ form.role() }}
+        {% for error in form.role.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.submit(style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
+    </p>
+</form>
+
+<p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+
+{% endblock %}

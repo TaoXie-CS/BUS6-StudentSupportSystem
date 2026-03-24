@@ -1,8 +1,28 @@
+from flask_login import UserMixin
+
 from app import db
 import sqlalchemy.orm as so
 import sqlalchemy as sa
 from datetime import datetime, date, timezone
+from werkzeug.security import generate_password_hash, check_password_hash
 
+#User (student / teacher)
+class User(UserMixin, db.Model):
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    username: so.Mapped[str] = so.mapped_column(sa.String(64), unique=True, index=True, nullable=False)
+    email: so.Mapped[str] = so.mapped_column(sa.String(120), unique=True, index=True, nullable=False)
+    password_hash: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
+    role: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False, default="student")
+    messages: so.WriteOnlyMapped[list["SupportMessage"]] = so.relationship(back_populates="author")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 # Support Message Model (Core business model)
 class SupportMessage(db.Model):
@@ -29,6 +49,10 @@ class SupportMessage(db.Model):
 
     # Deadline date (date only, no time component, default to current date, non-nullable)
     deadline: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
+    #User ID
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    #aAuthor
+    author: so.Mapped["User"] = so.relationship(back_populates="messages")
 
     def __repr__(self):
         # String representation for debugging (consistent format)

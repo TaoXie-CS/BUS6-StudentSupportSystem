@@ -29,9 +29,17 @@
 
     <a href="{{ url_for('downloads') }}">
         Download All files
-    </a><br><br>
+    </a>
+
+    <div>
+      <a href="{{ url_for('index') }}">
+        Return to Home Page
+      </a>
+    </div>
 
     {{ form.submit }}
 </form>
+
+
 
 {% endblock %}
