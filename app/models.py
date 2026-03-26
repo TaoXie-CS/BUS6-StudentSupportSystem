@@ -73,10 +73,8 @@ class SurveyResponse(db.Model):
     # Teaching satisfaction rating (1-5, stored as string for flexibility, indexed, non-nullable)
     teaching_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
 
-    # ===================== 【新增】食堂满意度评分 =====================
     canteen_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
 
-    # ===================== 【新增】校园环境满意度评分 =====================
     campus_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
 
     # Additional feedback (optional text, max length 1000, nullable, default empty string)
@@ -89,7 +87,7 @@ class SurveyResponse(db.Model):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    # User ID (关联提交问卷的用户)
+    # User ID
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
 
     def __repr__(self):

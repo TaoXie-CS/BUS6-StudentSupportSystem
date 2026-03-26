@@ -282,25 +282,22 @@ def downloads():
     return render_template('downloads.html', files=files)
 
 
-# ===================== 【修改】问卷提交路由（新增2个评分 + 登录校验） =====================
 @app.route('/survey', methods=['GET', 'POST'])
-@login_required  # 必须登录才能访问
+@login_required
 def survey():
     form = SurveyForm()
 
     if form.validate_on_submit():
         try:
-            # Create survey record (新增食堂+校园环境评分)
+            # Create survey record
             survey_record = SurveyResponse(
                 grade=form.grade.data.strip(),
                 gender=form.gender.data.strip(),
                 teaching_quality=form.teaching_quality.data.strip(),
-                # ===================== 【新增】 =====================
                 canteen_quality=form.canteen_quality.data.strip(),
                 campus_quality=form.campus_quality.data.strip(),
-                # ===================== 【新增结束】 =====================
                 feedback=form.feedback.data.strip() if form.feedback.data else "",
-                user_id=current_user.id  # 绑定提交用户
+                user_id=current_user.id
             )
 
             db.session.add(survey_record)
@@ -315,11 +312,9 @@ def survey():
     return render_template('survey.html', title='Teaching Quality Survey', form=form)
 
 
-# ===================== 【修改】问卷结果路由（权限控制 + 新增统计） =====================
 @app.route('/survey_results')
 @login_required  # 必须登录
 def survey_results():
-    # ===================== 【权限控制】仅教师可查看 =====================
     if current_user.role != "teacher":
         flash("You are not allowed to view survey results!", "danger")
         return redirect(url_for('index'))
@@ -333,12 +328,10 @@ def survey_results():
             func.count(SurveyResponse.id)
         ).group_by(SurveyResponse.grade).all()
 
-        # 统计三项满意度平均分
         avg_teaching = db.session.query(func.avg(cast(SurveyResponse.teaching_quality, Float))).scalar() or 0
         avg_canteen = db.session.query(func.avg(cast(SurveyResponse.canteen_quality, Float))).scalar() or 0
         avg_campus = db.session.query(func.avg(cast(SurveyResponse.campus_quality, Float))).scalar() or 0
 
-        # 总平均分
         avg_quality_final = round((avg_teaching + avg_canteen + avg_campus) / 3, 1)
 
     except Exception as e:
