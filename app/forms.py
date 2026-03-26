@@ -105,16 +105,15 @@ class SurveyForm(FlaskForm):
     grade = SelectField(
         "Your Grade",
         choices=[
-            ("", "Please select your grade"),  # Placeholder prompt
-            ("Junior 1", "Junior 1"),
-            ("Junior 2", "Junior 2"),
-            ("Junior 3", "Junior 3"),
-            ("Senior 1", "Senior 1"),
-            ("Senior 2", "Senior 2"),
-            ("Senior 3", "Senior 3")
+            ("", "Please select your grade"),
+            ("Freshman", "Freshman"),
+            ("Sophomore", "Sophomore"),
+            ("Junior", "Junior"),
+            ("Senior", "Senior"),
+            ("Graduate", "Graduate")
         ],
         validators=[
-            DataRequired(message="Grade is required")  # Validation message consistent with existing style
+            DataRequired(message="Grade is required")
         ]
     )
 
@@ -143,7 +142,7 @@ class SurveyForm(FlaskForm):
         ]
     )
 
-    # ====================== 【新增：食堂满意度】 ======================
+    # ====================== 【canteen satisfaction】 ======================
     canteen_quality = SelectField(
         "Canteen Satisfaction Rating",
         choices=[
@@ -159,7 +158,7 @@ class SurveyForm(FlaskForm):
         ]
     )
 
-    # ====================== 【新增：校园环境满意度】 ======================
+    # ====================== 【environment】 ======================
     campus_quality = SelectField(
         "Campus Environment Satisfaction Rating",
         choices=[
