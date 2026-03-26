@@ -99,6 +99,7 @@ class TeacherUpload(FlaskForm):
 
     submit = SubmitField("Upload File")
 
+
 class SurveyForm(FlaskForm):
     # Grade selection dropdown (consistent with existing field naming/validation style)
     grade = SelectField(
@@ -142,6 +143,38 @@ class SurveyForm(FlaskForm):
         ]
     )
 
+    # ====================== 【新增：食堂满意度】 ======================
+    canteen_quality = SelectField(
+        "Canteen Satisfaction Rating",
+        choices=[
+            ("", "Please rate canteen quality"),
+            ("5", "5 - Very Satisfied"),
+            ("4", "4 - Satisfied"),
+            ("3", "3 - Average"),
+            ("2", "2 - Dissatisfied"),
+            ("1", "1 - Very Dissatisfied")
+        ],
+        validators=[
+            DataRequired(message="Canteen satisfaction rating is required")
+        ]
+    )
+
+    # ====================== 【新增：校园环境满意度】 ======================
+    campus_quality = SelectField(
+        "Campus Environment Satisfaction Rating",
+        choices=[
+            ("", "Please rate campus environment"),
+            ("5", "5 - Very Satisfied"),
+            ("4", "4 - Satisfied"),
+            ("3", "3 - Average"),
+            ("2", "2 - Dissatisfied"),
+            ("1", "1 - Very Dissatisfied")
+        ],
+        validators=[
+            DataRequired(message="Campus environment satisfaction rating is required")
+        ]
+    )
+
     # Additional feedback (optional, consistent with TeacherUpload's remark style)
     feedback = TextAreaField(
         "Additional Feedback (optional)",
@@ -154,7 +187,8 @@ class SurveyForm(FlaskForm):
     # Submit button (consistent naming style with existing buttons)
     submit = SubmitField("Submit Survey")
 
-#Registration
+
+# Registration
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
@@ -169,7 +203,8 @@ class RegistrationForm(FlaskForm):
 
     submit = SubmitField('Register')
 
-#  Login
+
+# Login
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])

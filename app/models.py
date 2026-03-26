@@ -51,7 +51,7 @@ class SupportMessage(db.Model):
     deadline: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
     #User ID
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-    #aAuthor
+    #Author
     author: so.Mapped["User"] = so.relationship(back_populates="messages")
 
     def __repr__(self):
@@ -73,6 +73,12 @@ class SurveyResponse(db.Model):
     # Teaching satisfaction rating (1-5, stored as string for flexibility, indexed, non-nullable)
     teaching_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
 
+    # ===================== 【新增】食堂满意度评分 =====================
+    canteen_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+
+    # ===================== 【新增】校园环境满意度评分 =====================
+    campus_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+
     # Additional feedback (optional text, max length 1000, nullable, default empty string)
     feedback: so.Mapped[str] = so.mapped_column(sa.String(1000), nullable=True, default="")
 
@@ -82,6 +88,9 @@ class SurveyResponse(db.Model):
         nullable=False,
         default=lambda: datetime.now(timezone.utc)
     )
+
+    # User ID (关联提交问卷的用户)
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
 
     def __repr__(self):
         # Consistent __repr__ format with SupportMessage for debugging convenience

@@ -14,8 +14,9 @@ from flask_login import login_user, current_user, logout_user, login_required
 from app.models import User
 from app.forms import RegistrationForm, LoginForm
 
+
 # Register
-@app.route("/register", methods=['GET','POST'])
+@app.route("/register", methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -32,8 +33,9 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
+
 # Login
-@app.route("/login", methods=['GET','POST'])
+@app.route("/login", methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -46,11 +48,13 @@ def login():
         flash("Login failed")
     return render_template('login.html', form=form)
 
+
 # Logout
 @app.route("/logout")
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
 
 # Home page: submit and display all messages
 @app.route('/', methods=['GET', 'POST'])
@@ -59,7 +63,7 @@ def index():
     form = SupportMessageForm()
 
     if form.validate_on_submit():
-        #Only teachers could create message
+        # Only teachers could create message
         if current_user.role != "teacher":
             flash("Only teachers can post messages", "danger")
             return redirect(url_for('index'))
@@ -108,7 +112,7 @@ def index():
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
-        survey_avg=survey_avg       # Added
+        survey_avg=survey_avg  # Added
     )
 
 
@@ -202,7 +206,7 @@ def more_search():
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def file_upload():
-    #Only teachers can upload
+    # Only teachers can upload
     if current_user.role != "teacher":
         flash("Only teachers can upload files", "danger")
         return redirect(url_for('index'))
@@ -278,54 +282,65 @@ def downloads():
     return render_template('downloads.html', files=files)
 
 
+# ===================== 【修改】问卷提交路由（新增2个评分 + 登录校验） =====================
 @app.route('/survey', methods=['GET', 'POST'])
+@login_required  # 必须登录才能访问
 def survey():
     form = SurveyForm()
 
     if form.validate_on_submit():
         try:
-            # Create survey record (reuse SupportMessage data processing logic)
+            # Create survey record (新增食堂+校园环境评分)
             survey_record = SurveyResponse(
                 grade=form.grade.data.strip(),
                 gender=form.gender.data.strip(),
                 teaching_quality=form.teaching_quality.data.strip(),
-                feedback=form.feedback.data.strip() if form.feedback.data else ""
+                # ===================== 【新增】 =====================
+                canteen_quality=form.canteen_quality.data.strip(),
+                campus_quality=form.campus_quality.data.strip(),
+                # ===================== 【新增结束】 =====================
+                feedback=form.feedback.data.strip() if form.feedback.data else "",
+                user_id=current_user.id  # 绑定提交用户
             )
 
             db.session.add(survey_record)
             db.session.commit()
-            # Flash message (consistent style with existing features: success/danger)
             flash("Teaching quality survey submitted successfully! Thank you for your feedback.", "success")
-            return redirect(url_for('index'))  # Redirect to homepage after submission
+            return redirect(url_for('index'))
 
         except SQLAlchemyError as e:
-            db.session.rollback()  # Reuse existing error rollback logic
+            db.session.rollback()
             flash(f"Failed to submit survey: {str(e)}", "danger")
 
-    # Render survey page for GET requests
     return render_template('survey.html', title='Teaching Quality Survey', form=form)
 
 
-# Optional: Survey results page (backend feature, reuse more_search statistics logic)
+# ===================== 【修改】问卷结果路由（权限控制 + 新增统计） =====================
 @app.route('/survey_results')
+@login_required  # 必须登录
 def survey_results():
-    # Query all survey responses (sorted by submission time descending)
+    # ===================== 【权限控制】仅教师可查看 =====================
+    if current_user.role != "teacher":
+        flash("You are not allowed to view survey results!", "danger")
+        return redirect(url_for('index'))
+
     survey_responses = SurveyResponse.query.order_by(SurveyResponse.submitted_at.desc()).all()
 
-    # Statistics data (reuse func.avg/func.count logic from more_search)
     try:
-        # Total survey submissions
         total_surveys = SurveyResponse.query.count()
-        # Submission count by grade
         grade_stats = db.session.query(
             SurveyResponse.grade,
             func.count(SurveyResponse.id)
         ).group_by(SurveyResponse.grade).all()
-        # ========== Modified: Explicitly convert string to Float (fix average calculation) ==========
-        avg_quality = db.session.query(
-            func.avg(cast(SurveyResponse.teaching_quality, Float))
-        ).scalar()
-        avg_quality_final = round(avg_quality, 1) if avg_quality else 0
+
+        # 统计三项满意度平均分
+        avg_teaching = db.session.query(func.avg(cast(SurveyResponse.teaching_quality, Float))).scalar() or 0
+        avg_canteen = db.session.query(func.avg(cast(SurveyResponse.canteen_quality, Float))).scalar() or 0
+        avg_campus = db.session.query(func.avg(cast(SurveyResponse.campus_quality, Float))).scalar() or 0
+
+        # 总平均分
+        avg_quality_final = round((avg_teaching + avg_canteen + avg_campus) / 3, 1)
+
     except Exception as e:
         total_surveys = 0
         grade_stats = []

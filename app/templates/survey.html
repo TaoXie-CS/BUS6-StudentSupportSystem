@@ -39,9 +39,27 @@
             {% endfor %}
         </div>
 
+        {# ====================== 【新增：食堂满意度评分】 ====================== #}
+        <div>
+            <label>4. Canteen Satisfaction Rating *</label>
+            {{ form.canteen_quality }}
+            {% for error in form.canteen_quality.errors %}
+                <span>{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        {# ====================== 【新增：校园环境满意度评分】 ====================== #}
+        <div>
+            <label>5. Campus Environment Satisfaction Rating *</label>
+            {{ form.campus_quality }}
+            {% for error in form.campus_quality.errors %}
+                <span>{{ error }}</span>
+            {% endfor %}
+        </div>
+
         {# 4. Additional Feedback (Optional) #}
         <div>
-            <label>4. Additional Feedback (Optional)</label>
+            <label>6. Additional Feedback (Optional)</label>
             {{ form.feedback }}  {# Native rendering, no custom styling #}
         </div>
 
