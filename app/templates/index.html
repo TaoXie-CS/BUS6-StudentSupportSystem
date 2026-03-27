@@ -20,8 +20,9 @@
 
     <h1>Welcome to the Student Support App</h1>
 
-{% if current_user.role == 'teacher' %}
-    <!-- Support Message Submission Form -->
+<!-- 根据用户角色显示不同的内容 -->
+{% if current_user.role in [UserRole.TEACHER.value, UserRole.ADMIN.value] %}
+    <!-- 教师和管理员可以看到发布支持消息的表单 -->
     <form action='' method="post" novalidate style="max-width: 600px; margin-bottom: 30px;">
         {{ form.hidden_tag() }}
 
@@ -92,9 +93,16 @@
             {{ form.submit(style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
         </p>
     </form>
-{% else %}
+{% elif current_user.role in [UserRole.UNDERGRADUATE.value, UserRole.POSTGRADUATE.value, UserRole.INTERNATIONAL.value] %}
+    <!-- 学生可以看到学生工具区域 -->
     <div style="padding: 15px; background: #f8f9fa; border-radius: 4px; margin-bottom: 30px;">
-
+        <h3>Student Tools</h3>
+        <p>As a student, you can:</p>
+        <ul>
+            <li><a href="{{ url_for('submit_homework') }}">Submit Homework</a></li>
+            <li><a href="{{ url_for('submit_appointment') }}">Book Appointment</a></li>
+            <li><a href="{{ url_for('survey') }}">Participate in Survey</a></li>
+        </ul>
     </div>
 {% endif %}
 
@@ -118,17 +126,7 @@
         <p>No support messages added yet.</p>
     {% endif %}
 
-    <!-- Navigation Links -->
-    <div style="margin-top: 20px;">
-        <a href="{{ url_for('listing_messages') }}">View All Messages (Sorted by Priority)</a> |
-        <a href="{{ url_for('search_messages') }}">Search Messages</a> |
-        <a href="{{ url_for('more_search') }}">Advanced Search</a> |  <!-- ========== Modified: Add | separator ========== -->
-        {% if current_user.role == 'teacher' %}
-           <a href="{{ url_for('file_upload') }}">File Upload</a> |        <!-- ========== Modified: Add | separator ========== -->
-        {% endif %}
-        <a href="{{ url_for('downloads') }}">Downloads</a> |
-        <a href="{{ url_for('survey') }}">Survey</a>  <!-- Added: Survey entry link -->
-    </div>
+
 
 
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Publish Homework</h1>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    
+    <p>
+        {{ form.title.label }}<br>
+        {{ form.title(size=64, style="width: 100%; padding: 8px;") }}
+        {% for error in form.title.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.content.label }}<br>
+        {{ form.content(rows=10, style="width: 100%; padding: 8px;") }}
+        {% for error in form.content.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.deadline.label }}<br>
+        {{ form.deadline(style="width: 100%; padding: 8px;") }}
+        {% for error in form.deadline.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.submit(style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
+    </p>
+</form>
+
+<p><a href="{{ url_for('index') }}">Back to Home</a></p>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Homework Grading List</h1>
+
+{% if homeworks %}
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Title</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Student</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Submission Date</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Status</th>
+                <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for hw in homeworks %}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ hw.title }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ hw.submitted_by.name if hw.submitted_by else 'Unknown' }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ hw.submission_time.strftime('%Y-%m-%d %H:%M') if hw.submission_time else 'Not submitted' }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">
+                    {% if hw.grade %}
+                        <span style="color: green;">Graded: {{ hw.grade }}/100</span>
+                    {% else %}
+                        <span style="color: orange;">Pending</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 10px; border: 1px solid #ddd;">
+                    {% if hw.grade %}
+                        <a href="{{ url_for('grade_homework', hw_id=hw.id) }}" style="padding: 5px 10px; background: #6c757d; color: white; text-decoration: none; border-radius: 3px;">View</a>
+                    {% else %}
+                        <a href="{{ url_for('grade_homework', hw_id=hw.id) }}" style="padding: 5px 10px; background: #007bff; color: white; text-decoration: none; border-radius: 3px;">Grade</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No homeworks need to be graded.</p>
+{% endif %}
+
+<p><a href="{{ url_for('index') }}">Back to Home</a></p>
+{% endblock %}

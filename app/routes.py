@@ -66,12 +66,18 @@ def logout():
 @app.route('/user/register', methods=['GET', 'POST'])
 @login_required
 def user_register():
-    if current_user.role != UserRole.ADMIN.value:
+    # Only administrators or teachers can register users
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.TEACHER.value]:
         flash("Only administrators can register new users!", "danger")
         return redirect(url_for('index'))
     form = UserRegisterForm()
     if form.validate_on_submit():
         try:
+            # Check if teacher is trying to register a non-student role
+            if current_user.role == UserRole.TEACHER.value and form.role.data not in [UserRole.UNDERGRADUATE.value, UserRole.POSTGRADUATE.value, UserRole.INTERNATIONAL.value]:
+                flash("Teachers can only register student users!", "danger")
+                return redirect(url_for('user_register'))
+            
             if User.query.filter_by(user_id=form.user_id.data).first():
                 flash("User ID already exists!", "danger")
                 return redirect(url_for('user_register'))
@@ -91,7 +97,7 @@ def user_register():
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error registering user: {str(e)}", "danger")
-    return render_template('user_register.html', form=form)
+    return render_template('user_register.html', form=form, UserRole=UserRole)
 
 # Home page: submit and display all messages
 @app.route('/', methods=['GET', 'POST'])
@@ -101,7 +107,7 @@ def index():
 
     if form.validate_on_submit():
         # Only teachers could create message
-        if current_user.role != "teacher":
+        if current_user.role != UserRole.TEACHER.value:
             flash("Only teachers can post messages", "danger")
             return redirect(url_for('index'))
         try:
@@ -149,7 +155,8 @@ def index():
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
-        survey_avg=survey_avg  # Added
+        survey_avg=survey_avg,  # Added
+        UserRole=UserRole  # Added to access UserRole enum in templates
     )
 
 
@@ -161,7 +168,7 @@ def listing_messages():
     messages = SupportMessage.query.order_by(SupportMessage.priority.desc()).all()
     print("Number of messages retrieved：", len(messages))
     print("Message details：", messages)
-    return render_template('listing.html', students=messages)
+    return render_template('listing.html', students=messages, UserRole=UserRole)
 
 
 # Search page: Search for messages by teacher email
@@ -192,7 +199,8 @@ def search_messages():
         high=high_priority,
         email=email,
         course_name=course_name,
-        message_title=message_title
+        message_title=message_title,
+        UserRole=UserRole
     )
 
 
@@ -236,7 +244,8 @@ def more_search():
         results=results,
         status=priority_level,
         order=sort_by,
-        results1_final=avg_priority_final
+        results1_final=avg_priority_final,
+        UserRole=UserRole
     )
 
 
@@ -244,7 +253,7 @@ def more_search():
 @login_required
 def file_upload():
     # Only teachers can upload
-    if current_user.role != "teacher":
+    if current_user.role != UserRole.TEACHER.value:
         flash("Only teachers can upload files", "danger")
         return redirect(url_for('index'))
     # Create an object for upload form
@@ -288,7 +297,7 @@ def file_upload():
     # Get filename from request args for download
     filename = request.args.get('filename')
     # Render template for form, uploads and downloads
-    return render_template("upload.html", form=form, filename=filename, files=files)
+    return render_template("upload.html", form=form, filename=filename, files=files, UserRole=UserRole)
 
 
 """
@@ -316,7 +325,7 @@ def downloads():
     # List all files (exclude .gitkeep) and sort in reverse order
     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
     files.sort(reverse=True)
-    return render_template('downloads.html', files=files)
+    return render_template('downloads.html', files=files, UserRole=UserRole)
 
 
 @app.route('/survey', methods=['GET', 'POST'])
@@ -346,13 +355,13 @@ def survey():
             db.session.rollback()
             flash(f"Failed to submit survey: {str(e)}", "danger")
 
-    return render_template('survey.html', title='Teaching Quality Survey', form=form)
+    return render_template('survey.html', title='Teaching Quality Survey', form=form, UserRole=UserRole)
 
 
 @app.route('/survey_results')
 @login_required  # 必须登录
 def survey_results():
-    if current_user.role != "teacher":
+    if current_user.role != UserRole.TEACHER.value:
         flash("You are not allowed to view survey results!", "danger")
         return redirect(url_for('index'))
 
@@ -382,7 +391,8 @@ def survey_results():
         responses=survey_responses,
         total=total_surveys,
         grade_stats=grade_stats,
-        avg_quality=avg_quality_final
+        avg_quality=avg_quality_final,
+        UserRole=UserRole
     )
 
 # Homework Publication (Teachers Only)
@@ -409,7 +419,7 @@ def publish_homework():
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error publishing homework: {str(e)}", "danger")
-    return render_template('publish_homework.html', form=form, teacher=current_user)
+    return render_template('publish_homework.html', form=form, teacher=current_user, UserRole=UserRole)
 
 # Homework Submission (Students Only)
 @app.route('/homework/submit', methods=['GET', 'POST'])
@@ -442,7 +452,32 @@ def submit_homework():
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error submitting homework: {str(e)}", "danger")
-    return render_template('submit_homework.html', form=form, student=current_user)
+    return render_template('submit_homework.html', form=form, student=current_user, UserRole=UserRole)
+
+# Homework Grading List (Teachers Only)
+@app.route('/homework/grade/list')
+@login_required
+def grade_homework_list():
+    if current_user.role != UserRole.TEACHER.value:
+        flash("Only teachers can view homework grading list!", "danger")
+        return redirect(url_for('index'))
+    
+    # Get all homeworks that have been submitted but not yet graded
+    homeworks = Homework.query.filter(
+        Homework.submitted_by_id.isnot(None),
+        Homework.grade.is_(None)
+    ).order_by(Homework.submission_time.desc()).all()
+    
+    # Also get homeworks that have already been graded
+    graded_homeworks = Homework.query.filter(
+        Homework.submitted_by_id.isnot(None),
+        Homework.grade.isnot(None)
+    ).order_by(Homework.submission_time.desc()).all()
+    
+    # Combine both lists
+    all_homeworks = homeworks + graded_homeworks
+    
+    return render_template('grade_homework_list.html', homeworks=all_homeworks, UserRole=UserRole)
 
 # Homework Grading (Teachers Only)
 @app.route('/homework/grade/<int:hw_id>', methods=['GET', 'POST'])
@@ -465,7 +500,7 @@ def grade_homework(hw_id):
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error grading homework: {str(e)}", "danger")
-    return render_template('grade_homework.html', form=form, homework=homework)
+    return render_template('grade_homework.html', form=form, homework=homework, UserRole=UserRole)
 
 # Appointment Submission (Students Only)
 @app.route('/appointment/submit', methods=['GET', 'POST'])
@@ -507,13 +542,13 @@ def submit_appointment():
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error submitting appointment: {str(e)}", "danger")
-    return render_template('submit_appointment.html', form=form, student=current_user)
+    return render_template('submit_appointment.html', form=form, student=current_user, UserRole=UserRole)
 
 # Appointment Status Update (Only for Corresponding Advisors)
-@app.route('/appointment/update/<int:appt_id>', methods=['GET', 'POST'])
+@app.route('/appointment/update/<int:app_id>', methods=['GET', 'POST'])
 @login_required
-def update_appointment(appt_id):
-    appointment = Appointment.query.get_or_404(appt_id)
+def update_appointment(app_id):
+    appointment = Appointment.query.get_or_404(app_id)
     if current_user.id != appointment.advisor_id:
         flash("You are not authorized to update this appointment!", "danger")
         return redirect(url_for('index'))
@@ -525,17 +560,17 @@ def update_appointment(appt_id):
             appointment.status = form.status.data
             db.session.commit()
             flash(f"Appointment status updated to {form.status.data}!", "success")
-            return redirect(url_for('update_appointment', appt_id=appt_id))
+            return redirect(url_for('update_appointment', app_id=app_id))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error updating appointment: {str(e)}", "danger")
-    return render_template('update_appointment.html', form=form, appointment=appointment)
+    return render_template('update_appointment.html', form=form, appointment=appointment, UserRole=UserRole)
 
 # Appointment Feedback (Only for Corresponding Students)
-@app.route('/appointment/feedback/<int:appt_id>', methods=['GET', 'POST'])
+@app.route('/appointment/feedback/<int:app_id>', methods=['GET', 'POST'])
 @login_required
-def feedback_appointment(appt_id):
-    appointment = Appointment.query.get_or_404(appt_id)
+def feedback_appointment(app_id):
+    appointment = Appointment.query.get_or_404(app_id)
     if current_user.id != appointment.student_id:
         flash("You are not authorized to submit feedback for this appointment!", "danger")
         return redirect(url_for('index'))
@@ -547,8 +582,8 @@ def feedback_appointment(appt_id):
             appointment.feedback_comment = form.comment.data
             db.session.commit()
             flash("Feedback submitted successfully!", "success")
-            return redirect(url_for('feedback_appointment', appt_id=appt_id))
+            return redirect(url_for('feedback_appointment', app_id=app_id))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f"Error submitting feedback: {str(e)}", "danger")
-    return render_template('feedback_appointment.html', form=form, appointment=appointment)
+    return render_template('feedback_appointment.html', form=form, appointment=appointment, UserRole=UserRole)

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Submit Appointment</h1>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+    
+    <p>
+        {{ form.service_type.label }}<br>
+        {{ form.service_type() }}
+        {% for error in form.service_type.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.advisor_id.label }}<br>
+        {{ form.advisor_id() }}
+        {% for error in form.advisor_id.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.appointment_time.label }}<br>
+        {{ form.appointment_time(style="width: 100%; padding: 8px;") }}
+        {% for error in form.appointment_time.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.submit(style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
+    </p>
+</form>
+
+<p><a href="{{ url_for('index') }}">Back to Home</a></p>
+{% endblock %}

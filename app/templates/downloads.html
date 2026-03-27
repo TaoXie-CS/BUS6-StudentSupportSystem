@@ -16,7 +16,7 @@
          <p> No files uploaded yet</p>
      {% endif %}
 
-     {% if current_user.role == 'teacher' %}
+     {% if current_user.role == UserRole.TEACHER.value %}
         <a href="{{ url_for('file_upload') }}">Return to Upload Page</a>
      {% endif %}
      <div><a href="{{ url_for('index') }}">Return to Home page</a></div>
