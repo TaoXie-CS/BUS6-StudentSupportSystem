@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, SurveyResponse
+from app.models import SupportMessage, SurveyResponse, User
 from app.forms import SupportMessageForm, TeacherUpload, SurveyForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError

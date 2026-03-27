@@ -37,11 +37,18 @@ class AppointmentStatus(Enum):
 #User (student / teacher)
 class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    user_id: so.Mapped[str] = so.mapped_column(sa.String(50), unique=True, index=True, nullable=True)
     username: so.Mapped[str] = so.mapped_column(sa.String(64), unique=True, index=True, nullable=False)
     email: so.Mapped[str] = so.mapped_column(sa.String(120), unique=True, index=True, nullable=False)
+    name: so.Mapped[str] = so.mapped_column(sa.String(100), nullable=True)
     password_hash: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
     role: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False, default="student")
+    contact_info: so.Mapped[str] = so.mapped_column(sa.String(200), nullable=True)
     messages: so.WriteOnlyMapped[list["SupportMessage"]] = so.relationship(back_populates="author")
+    homeworks_published: so.WriteOnlyMapped[list["Homework"]] = so.relationship(back_populates="teacher", foreign_keys="Homework.teacher_id")
+    homeworks_submitted: so.WriteOnlyMapped[list["Homework"]] = so.relationship(back_populates="submitted_by", foreign_keys="Homework.submitted_by_id")
+    appointments: so.WriteOnlyMapped[list["Appointment"]] = so.relationship(back_populates="student", foreign_keys="Appointment.student_id")
+    advisor_appointments: so.WriteOnlyMapped[list["Appointment"]] = so.relationship(back_populates="advisor", foreign_keys="Appointment.advisor_id")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

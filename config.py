@@ -5,3 +5,4 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-cannot-guess-this-ever'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or \
         'sqlite:///' + os.path.join(basedir,'app.db')
+    DEBUG = True  # 开启 debug 模式

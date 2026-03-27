@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, \
-    SelectMultipleField, PasswordField, BooleanField, DateTimeField
+    SelectMultipleField, PasswordField, BooleanField, DateTimeField, FloatField
 from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
