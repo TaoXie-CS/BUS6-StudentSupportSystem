@@ -13,6 +13,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
 from app.models import User
 from app.forms import RegistrationForm, LoginForm
+from app.ai import generate_message_summary
+from flask import jsonify
+
 
 
 # Register
@@ -105,14 +108,25 @@ def index():
     # Display all messages in descending order of publication date
     support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
 
-    # ========== Modified: Pass survey_total/survey_avg to template ==========
+
+    ai_summary = ""
+    if request.method == "POST":
+        context = ""
+        for msg in support_messages:
+            context += f"Course:{msg.course_name} Title:{msg.message_title} Priority:{msg.priority}\n"
+
+        if not context:
+            ai_summary = "⚠️ No messages yet. Please add some first."
+        else:
+            ai_summary = generate_message_summary(context)
     return render_template(
         'index.html',
         current_user=current_user,
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
-        survey_avg=survey_avg  # Added
+        survey_avg=survey_avg ,
+        ai_summary=ai_summary # Added
     )
 
 
@@ -313,7 +327,7 @@ def survey():
 
 
 @app.route('/survey_results')
-@login_required  # 必须登录
+@login_required
 def survey_results():
     if current_user.role != "teacher":
         flash("You are not allowed to view survey results!", "danger")

@@ -117,6 +117,29 @@
     {% else %}
         <p>No support messages added yet.</p>
     {% endif %}
+{% if current_user.role == 'student' %}
+<div style="margin: 30px 0; padding: 20px; background:#f8fcff; border-radius:12px; border:1px solid #e0f0ff;">
+    <div style="display:flex; align-items:center; gap:14px;">
+        <div style="font-size:28px;">🤖</div>
+        <div>
+            <h3 style="margin:0; color:#007bff;">AI Smart Summary</h3>
+            <p style="margin:4px 0; color:#666; font-size:14px;">Powered by Local TinyLlama</p>
+        </div>
+    </div>
+
+    <form method="POST" style="margin-top:15px;">
+      <button type="submit" name="submit" value="Analyze All Messages" style="padding:10px 20px; background:#007bff; color:white; border:none; border-radius:8px; cursor:pointer;">
+    🔍 Analyze All Messages
+      </button>
+    </form>
+
+    {% if ai_summary %}
+    <div style="margin-top:15px; padding:16px; background:white; border-radius:8px; border:1px solid #eee; line-height:1.6;">
+        {{ ai_summary }}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
     <!-- Navigation Links -->
     <div style="margin-top: 20px;">
