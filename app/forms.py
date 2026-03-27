@@ -255,7 +255,7 @@ class AppointmentForm(FlaskForm):
     service_type = SelectField(
         "Service Type",
         validators=[DataRequired()],
-        choices=[(type.value, type.value) for type in ServiceType]
+        choices=[(type.value, type.value) for type in ServiceType if type != ServiceType.HOMEWORK]
     )
     advisor_id = SelectField("Select Advisor", validators=[DataRequired()], coerce=int)
     appointment_time = DateTimeField(
