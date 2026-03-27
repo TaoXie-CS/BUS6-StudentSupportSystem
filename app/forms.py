@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, \
-    SelectMultipleField, PasswordField, BooleanField
-from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo
+    SelectMultipleField, PasswordField, BooleanField, DateTimeField
+from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo, Optional
 from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
-
+from app.models import UserRole, ServiceType, AppointmentStatus
 
 # Support Message Submission Form (Core business form)
 class SupportMessageForm(FlaskForm):
@@ -209,3 +209,75 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
+
+
+class UserRegisterForm(FlaskForm):
+    """User Registration Form"""
+    user_id = StringField("Custom User ID", validators=[DataRequired(), Length(max=50)])
+    name = StringField("Full Name", validators=[DataRequired(), Length(max=100)])
+    role = SelectField(
+        "User Role",
+        validators=[DataRequired()],
+        choices=[(role.value, role.value) for role in UserRole]
+    )
+    contact_info = StringField("Contact Info (Phone/Email)", validators=[Optional(), Length(max=200)])
+    submit = SubmitField("Register")
+
+
+class HomeworkPublishForm(FlaskForm):
+    """Form for Teachers to Publish Homework"""
+    title = StringField("Homework Title", validators=[DataRequired(), Length(max=256)])
+    content = TextAreaField("Homework Content", validators=[DataRequired()])
+    deadline = DateTimeField(
+        "Deadline (YYYY-MM-DD HH:MM)",
+        format="%Y-%m-%d %H:%M",
+        validators=[DataRequired()],
+        default=datetime.now
+    )
+    submit = SubmitField("Publish Homework")
+
+
+class HomeworkSubmitForm(FlaskForm):
+    """Form for Students to Submit Homework"""
+    homework_id = SelectField("Select Homework", validators=[DataRequired()], coerce=int)
+    submit = SubmitField("Submit Homework")
+
+
+class HomeworkGradeForm(FlaskForm):
+    """Form for Teachers to Grade Homework"""
+    grade = FloatField("Grade", validators=[DataRequired(), NumberRange(min=0, max=100)])
+    comment = TextAreaField("Comment", validators=[Optional(), Length(max=500)])
+    submit = SubmitField("Submit Grade")
+
+
+class AppointmentForm(FlaskForm):
+    """Form for Students to Book Services"""
+    service_type = SelectField(
+        "Service Type",
+        validators=[DataRequired()],
+        choices=[(type.value, type.value) for type in ServiceType]
+    )
+    advisor_id = SelectField("Select Advisor", validators=[DataRequired()], coerce=int)
+    appointment_time = DateTimeField(
+        "Appointment Time (YYYY-MM-DD HH:MM)",
+        format="%Y-%m-%d %H:%M",
+        validators=[DataRequired()]
+    )
+    submit = SubmitField("Submit Appointment")
+
+
+class AppointmentStatusForm(FlaskForm):
+    """Form for Advisors to Confirm/Reject Appointments"""
+    status = SelectField(
+        "Appointment Status",
+        validators=[DataRequired()],
+        choices=[(status.value, status.value) for status in AppointmentStatus]
+    )
+    submit = SubmitField("Update Status")
+
+
+class AppointmentFeedbackForm(FlaskForm):
+    """Form for Students to Provide Service Feedback"""
+    rating = IntegerField("Rating (1-5)", validators=[DataRequired(), NumberRange(min=1, max=5)])
+    comment = TextAreaField("Comment", validators=[Optional(), Length(max=500)])
+    submit = SubmitField("Submit Feedback")

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Message - {{ msg.message_title }}{% endblock %}
+
+{% block content %}
+    <h1>Edit Support Message</h1>
+
+    <!-- 编辑表单 -->
+    <form action='' method="post" novalidate style="max-width: 600px; margin-bottom: 30px;">
+        {{ form.hidden_tag() }}
+
+        <!-- Course name -->
+        <p style="margin: 10px 0;">
+            {{ form.course_name.label }}<br>
+            {{ form.course_name(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.course_name.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Message subject -->
+        <p style="margin: 10px 0;">
+            {{ form.message_title.label }}<br>
+            {{ form.message_title(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.message_title.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Message body -->
+        <p style="margin: 10px 0;">
+            {{ form.message_content.label }}<br>
+            {{ form.message_content(rows=4, cols=60, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.message_content.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Priority -->
+        <p style="margin: 10px 0;">
+            {{ form.priority.label }} (1-10)<br>
+            {{ form.priority(size=10, style="padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.priority.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Teacher's email address -->
+        <p style="margin: 10px 0;">
+            {{ form.teacher_email.label }}<br>
+            {{ form.teacher_email(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.teacher_email.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Publish date -->
+        <p style="margin: 10px 0;">
+            {{ form.publish_date.label }}<br>
+            {{ form.publish_date(style="padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.publish_date.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <!-- Deadline -->
+        <p style="margin: 10px 0;">
+            {{ form.deadline.label }}<br>
+            {{ form.deadline(style="padding: 8px; margin-top: 5px;") }}<br>
+            {% for error in form.deadline.errors %}
+                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <p style="margin: 20px 0; display: flex; gap: 10px;">
+            {{ form.submit(style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
+            <a href="{{ url_for('message_detail', msg_id=msg.id) }}" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px; align-self: center;">
+                Cancel
+            </a>
+        </p>
+    </form>
+{% endblock %}

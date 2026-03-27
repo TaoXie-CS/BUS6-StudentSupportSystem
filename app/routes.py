@@ -11,8 +11,15 @@ from app.forms import SupportMessageForm, TeacherUpload, SurveyForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
-from app.models import User
-from app.forms import RegistrationForm, LoginForm
+from app.models import (
+    SupportMessage, User, SurveyResponse, Homework, Appointment,
+    UserRole, ServiceType, AppointmentStatus
+)
+from app.forms import (
+    SupportMessageForm, TeacherUpload, SurveyForm, RegistrationForm, LoginForm,
+    UserRegisterForm, HomeworkPublishForm, HomeworkSubmitForm, HomeworkGradeForm,
+    AppointmentForm, AppointmentStatusForm, AppointmentFeedbackForm
+)
 
 
 # Register
@@ -55,6 +62,36 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# Extend user registration (role system)
+@app.route('/user/register', methods=['GET', 'POST'])
+@login_required
+def user_register():
+    if current_user.role != UserRole.ADMIN.value:
+        flash("Only administrators can register new users!", "danger")
+        return redirect(url_for('index'))
+    form = UserRegisterForm()
+    if form.validate_on_submit():
+        try:
+            if User.query.filter_by(user_id=form.user_id.data).first():
+                flash("User ID already exists!", "danger")
+                return redirect(url_for('user_register'))
+            user = User(
+                user_id=form.user_id.data,
+                name=form.name.data,
+                role=form.role.data,
+                contact_info=form.contact_info.data,
+                username=form.user_id.data,  # Compatible with basic user models
+                email=f"{form.user_id.data}@example.com"  # Temporary email, which can be modified later
+            )
+            user.set_password("123456")  # Default password; it is recommended to enforce a change.
+            db.session.add(user)
+            db.session.commit()
+            flash(f"User {form.name.data} registered successfully!", "success")
+            return redirect(url_for('user_register'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error registering user: {str(e)}", "danger")
+    return render_template('user_register.html', form=form)
 
 # Home page: submit and display all messages
 @app.route('/', methods=['GET', 'POST'])
@@ -347,3 +384,171 @@ def survey_results():
         grade_stats=grade_stats,
         avg_quality=avg_quality_final
     )
+
+# Homework Publication (Teachers Only)
+@app.route('/homework/publish', methods=['GET', 'POST'])
+@login_required
+def publish_homework():
+    if current_user.role != UserRole.TEACHER.value:
+        flash("Only teachers can publish homework!", "danger")
+        return redirect(url_for('index'))
+
+    form = HomeworkPublishForm()
+    if form.validate_on_submit():
+        try:
+            homework = Homework(
+                title=form.title.data,
+                content=form.content.data,
+                deadline=form.deadline.data,
+                teacher_id=current_user.id
+            )
+            db.session.add(homework)
+            db.session.commit()
+            flash(f"Homework '{form.title.data}' published successfully!", "success")
+            return redirect(url_for('publish_homework'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error publishing homework: {str(e)}", "danger")
+    return render_template('publish_homework.html', form=form, teacher=current_user)
+
+# Homework Submission (Students Only)
+@app.route('/homework/submit', methods=['GET', 'POST'])
+@login_required
+def submit_homework():
+    if current_user.role not in [UserRole.UNDERGRADUATE.value, UserRole.POSTGRADUATE.value, UserRole.INTERNATIONAL.value]:
+        flash("Only students can submit homework!", "danger")
+        return redirect(url_for('index'))
+
+    form = HomeworkSubmitForm()
+    # Load unsubmitted homework
+    form.homework_id.choices = [
+        (hw.id, hw.title) for hw in Homework.query.filter(
+            Homework.teacher_id.isnot(None),
+            Homework.submitted_by_id.is_(None)
+        ).all()
+    ]
+
+    if form.validate_on_submit():
+        try:
+            homework = Homework.query.get(form.homework_id.data)
+            if not homework:
+                flash("Homework not found!", "danger")
+                return redirect(url_for('submit_homework'))
+            homework.submitted_by_id = current_user.id
+            homework.submission_time = datetime.now()
+            db.session.commit()
+            flash(f"Homework '{homework.title}' submitted successfully!", "success")
+            return redirect(url_for('submit_homework'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error submitting homework: {str(e)}", "danger")
+    return render_template('submit_homework.html', form=form, student=current_user)
+
+# Homework Grading (Teachers Only)
+@app.route('/homework/grade/<int:hw_id>', methods=['GET', 'POST'])
+@login_required
+def grade_homework(hw_id):
+    if current_user.role != UserRole.TEACHER.value:
+        flash("Only teachers can grade homework!", "danger")
+        return redirect(url_for('index'))
+
+    homework = Homework.query.get_or_404(hw_id)
+    form = HomeworkGradeForm()
+    if form.validate_on_submit():
+        try:
+            homework.grade = form.grade.data
+            homework.comment = form.comment.data
+            homework.graded_by_id = current_user.id
+            db.session.commit()
+            flash(f"Homework '{homework.title}' graded successfully!", "success")
+            return redirect(url_for('grade_homework', hw_id=hw_id))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error grading homework: {str(e)}", "danger")
+    return render_template('grade_homework.html', form=form, homework=homework)
+
+# Appointment Submission (Students Only)
+@app.route('/appointment/submit', methods=['GET', 'POST'])
+@login_required
+def submit_appointment():
+    if current_user.role not in [UserRole.UNDERGRADUATE.value, UserRole.POSTGRADUATE.value, UserRole.INTERNATIONAL.value]:
+        flash("Only students can book appointments!", "danger")
+        return redirect(url_for('index'))
+
+    form = AppointmentForm()
+    # Load available advisors
+    form.advisor_id.choices = [
+        (user.id, f"{user.name} ({user.role})") for user in User.query.filter(
+            User.role.in_([
+                UserRole.TEACHER.value,
+                UserRole.PSYCHOLOGIST.value,
+                UserRole.CAREER_ADVISOR.value
+            ])
+        ).all()
+    ]
+
+    if form.validate_on_submit():
+        try:
+            advisor = User.query.get(form.advisor_id.data)
+            if not advisor:
+                flash("Advisor not found!", "danger")
+                return redirect(url_for('submit_appointment'))
+            appointment = Appointment(
+                student_id=current_user.id,
+                advisor_id=advisor.id,
+                service_type=form.service_type.data,
+                appointment_time=form.appointment_time.data,
+                status=AppointmentStatus.PENDING.value
+            )
+            db.session.add(appointment)
+            db.session.commit()
+            flash("Appointment submitted successfully! Waiting for confirmation.", "success")
+            return redirect(url_for('submit_appointment'))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error submitting appointment: {str(e)}", "danger")
+    return render_template('submit_appointment.html', form=form, student=current_user)
+
+# Appointment Status Update (Only for Corresponding Advisors)
+@app.route('/appointment/update/<int:appt_id>', methods=['GET', 'POST'])
+@login_required
+def update_appointment(appt_id):
+    appointment = Appointment.query.get_or_404(appt_id)
+    if current_user.id != appointment.advisor_id:
+        flash("You are not authorized to update this appointment!", "danger")
+        return redirect(url_for('index'))
+
+    form = AppointmentStatusForm()
+    form.status.data = appointment.status  # Echo the current status
+    if form.validate_on_submit():
+        try:
+            appointment.status = form.status.data
+            db.session.commit()
+            flash(f"Appointment status updated to {form.status.data}!", "success")
+            return redirect(url_for('update_appointment', appt_id=appt_id))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error updating appointment: {str(e)}", "danger")
+    return render_template('update_appointment.html', form=form, appointment=appointment)
+
+# Appointment Feedback (Only for Corresponding Students)
+@app.route('/appointment/feedback/<int:appt_id>', methods=['GET', 'POST'])
+@login_required
+def feedback_appointment(appt_id):
+    appointment = Appointment.query.get_or_404(appt_id)
+    if current_user.id != appointment.student_id:
+        flash("You are not authorized to submit feedback for this appointment!", "danger")
+        return redirect(url_for('index'))
+
+    form = AppointmentFeedbackForm()
+    if form.validate_on_submit():
+        try:
+            appointment.feedback_rating = form.rating.data
+            appointment.feedback_comment = form.comment.data
+            db.session.commit()
+            flash("Feedback submitted successfully!", "success")
+            return redirect(url_for('feedback_appointment', appt_id=appt_id))
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error submitting feedback: {str(e)}", "danger")
+    return render_template('feedback_appointment.html', form=form, appointment=appointment)

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Success - Submission Complete{% endblock %}
+
+{% block content %}
+    <div style="max-width: 600px; margin: 50px auto; padding: 30px; border: 1px solid #28a745; border-radius: 4px; background-color: #f8f9fa;">
+        <h1 style="color: #28a745; margin-bottom: 20px;">✅ Submission Successful!</h1>
+        <p style="font-size: 16px; margin-bottom: 30px;">{{ success_message }}</p>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ url_for('index') }}" style="padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">
+                Return to Home
+            </a>
+            {% if back_url %}
+                <a href="{{ back_url }}" style="padding: 8px 16px; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">
+                    Submit Another
+                </a>
+            {% endif %}
+            <a href="{{ url_for('listing_messages') }}" style="padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">
+                View All Messages
+            </a>
+        </div>
+    </div>
+{% endblock %}

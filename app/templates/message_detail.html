@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ msg.message_title }} - Message Detail{% endblock %}
+
+{% block content %}
+    <h1>Message Detail</h1>
+    <div style="max-width: 800px; padding: 20px; border: 1px solid #eee; border-radius: 4px; margin: 20px 0;">
+        <div style="margin-bottom: 15px;">
+            <strong>Course Name:</strong> {{ msg.course_name }}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Message Title:</strong> {{ msg.message_title }}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Message Content:</strong> 
+            <p style="white-space: pre-wrap; margin-top: 5px; line-height: 1.6;">{{ msg.message_content }}</p>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Priority:</strong> 
+            <span style="
+                padding: 4px 8px; 
+                border-radius: 4px;
+                color: white;
+                background-color: {{ 
+                    '#dc3545' if msg.priority >=8 else 
+                    '#ffc107' if msg.priority >=4 else 
+                    '#28a745' 
+                }};
+            ">
+                {{ msg.priority }}/10
+            </span>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Teacher Email:</strong> {{ msg.teacher_email }}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Publish Date:</strong> {{ msg.publish_date.strftime('%Y-%m-%d %H:%M') }}
+        </div>
+        <div style="margin-bottom: 15px;">
+            <strong>Deadline:</strong> {{ msg.deadline.strftime('%Y-%m-%d %H:%M') }}
+        </div>
+    </div>
+
+    <!-- 返回按钮 -->
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('index') }}" style="margin-right: 10px;">Home</a> |
+        <a href="{{ url_for('listing_messages') }}">All Messages</a> |
+        <a href="{{ url_for('search_messages') }}">Search Messages</a>
+    </div>
+{% endblock %}

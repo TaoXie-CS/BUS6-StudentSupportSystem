@@ -5,6 +5,34 @@ import sqlalchemy.orm as so
 import sqlalchemy as sa
 from datetime import datetime, date, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
+from enum import Enum
+
+class UserRole(Enum):
+    """User Role Enumeration"""
+    UNDERGRADUATE = "Undergraduate"
+    POSTGRADUATE = "Postgraduate"
+    INTERNATIONAL = "International Student"
+    TEACHER = "Lecturer"
+    COUNSELOR = "Counselor"
+    ACADEMIC_ADVISOR = "Academic Advisor"
+    ADMIN = "Administrator"
+    PSYCHOLOGIST = "Psychologist"
+    CAREER_ADVISOR = "Career Advisor"
+
+class ServiceType(Enum):
+    """Service Type Enumeration"""
+    TUTORING = "Tutoring"
+    HOMEWORK = "Homework Submission & Correction"
+    PSYCHOLOGY = "Psychological Counseling"
+    ACADEMIC = "Academic Consultation"
+    CAREER = "Career Guidance"
+
+class AppointmentStatus(Enum):
+    """Appointment Status Enumeration"""
+    PENDING = "Pending"
+    CONFIRMED = "Confirmed"
+    REJECTED = "Rejected"
+    COMPLETED = "Completed"
 
 #User (student / teacher)
 class User(UserMixin, db.Model):
@@ -94,3 +122,45 @@ class SurveyResponse(db.Model):
         # Consistent __repr__ format with SupportMessage for debugging convenience
         return f'<SurveyResponse {self.id} - {self.grade} ({self.gender})>'
 # ===================== End of addition =====================
+
+class Homework(db.Model):
+    """Homework Model"""
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    title: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
+    content: so.Mapped[str] = so.mapped_column(sa.Text, nullable=False)
+    deadline: so.Mapped[datetime] = so.mapped_column(sa.DateTime, nullable=False)
+
+    teacher_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    teacher = so.relationship("User", back_populates="homeworks_published", foreign_keys=[teacher_id])
+
+    submitted_by_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=True)
+    submitted_by = so.relationship("User", back_populates="homeworks_submitted", foreign_keys=[submitted_by_id])
+
+    submission_time: so.Mapped[datetime] = so.mapped_column(sa.DateTime, nullable=True)
+    grade: so.Mapped[float] = so.mapped_column(sa.Float, nullable=True)
+    comment: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
+    graded_by_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=True)
+    graded_by = so.relationship("User", foreign_keys=[graded_by_id])
+
+    def __repr__(self):
+        return f"<Homework {self.title} (Deadline: {self.deadline})>"
+
+class Appointment(db.Model):
+    """Appointment Model"""
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+
+    student_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    student = so.relationship("User", back_populates="appointments", foreign_keys=[student_id])
+
+    advisor_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    advisor = so.relationship("User", back_populates="advisor_appointments", foreign_keys=[advisor_id])
+
+    service_type: so.Mapped[str] = so.mapped_column(sa.String(50), nullable=False)
+    appointment_time: so.Mapped[datetime] = so.mapped_column(sa.DateTime, nullable=False)
+    status: so.Mapped[str] = so.mapped_column(sa.String(50), default=AppointmentStatus.PENDING.value, nullable=False)
+
+    feedback_rating: so.Mapped[int] = so.mapped_column(sa.Integer, default=0)
+    feedback_comment: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<Appointment {self.service_type} ({self.status})>"
