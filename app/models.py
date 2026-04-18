@@ -94,3 +94,12 @@ class SurveyResponse(db.Model):
         # Consistent __repr__ format with SupportMessage for debugging convenience
         return f'<SurveyResponse {self.id} - {self.grade} ({self.gender})>'
 # ===================== End of addition =====================
+# ====================== [new]teacher adapt survey======================
+class SurveyTemplate(db.Model):
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    title: so.Mapped[str] = so.mapped_column(sa.String(200), default="Teaching Quality Survey")
+    questions: so.Mapped[str] = so.mapped_column(sa.Text, default="")  # 所有问题
+    updated_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f"<SurveyTemplate {self.title}>"

@@ -1,69 +1,54 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Teaching Quality Survey</h1>
+<h1>{{ title }}</h1>
 
-    {# Core Requirement: Form must include method="post", otherwise it uses GET by default #}
-    <form method="post" novalidate>
-        {{ form.hidden_tag() }}  {# Mandatory: CSRF protection, otherwise POST requests will be blocked #}
+<form method="post">
+    {{ form.hidden_tag() }}
 
-        {# 1. Grade Field #}
-        <div>
-            <label>1. Your Grade *</label>
-            {{ form.grade }}  {# Native rendering, no custom styling #}
-            {# Display validation errors #}
-            {% for error in form.grade.errors %}
-                <span>{{ error }}</span>
-            {% endfor %}
+    {% if current_user.role == 'student' %}
+        <!-- teacher adaptable survey items -->
+        {% for q in questions %}
+        <div style="margin:12px 0;">
+            <label>{{ q }}</label>
+            {% if q == "Your Grade" %}
+                <select name="grade" required>
+                    <option value="">Select</option>
+                    <option>Freshman</option>
+                    <option>Sophomore</option>
+                    <option>Junior</option>
+                    <option>Senior</option>
+                </select>
+            {% elif q == "Your Gender" %}
+                <input type="radio" name="gender" value="Male" required> Male
+                <input type="radio" name="gender" value="Female"> Female
+            {% elif "Feedback" in q or "Other" in q %}
+                <textarea name="{{ q }}" rows="3" cols="50"></textarea>
+            {% else %}
+                <select name="{{ q }}" required>
+                    <option value="5">Very Satisfied</option>
+                    <option value="4">Satisfied</option>
+                    <option value="3">Average</option>
+                    <option value="2">Dissatisfied</option>
+                    <option value="1">Very Dissatisfied</option>
+                </select>
+            {% endif %}
         </div>
+        {% endfor %}
 
-        {# 2. Gender Field #}
-        <div>
-            <label>2. Your Gender *</label>
-            {% for subfield in form.gender %}
-                {{ subfield }} {{ subfield.label }}
-            {% endfor %}
-            {# Display validation errors #}
-            {% for error in form.gender.errors %}
-                <span>{{ error }}</span>
-            {% endfor %}
-        </div>
+    {% else %}
+        <!-- TEACHER SURVEY -->
+        <h3>Teacher Survey</h3>
+        <label>Course Schedule Satisfaction</label>
+        <select name="teaching_quality">
+            <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>
+        </select>
 
-        {# 3. Teaching Quality Rating #}
-        <div>
-            <label>3. Teaching Satisfaction Rating *</label>
-            {{ form.teaching_quality }}  {# Native rendering, no custom styling #}
-            {# Display validation errors #}
-            {% for error in form.teaching_quality.errors %}
-                <span>{{ error }}</span>
-            {% endfor %}
-        </div>
+        <label>Other Feedback</label>
+        <textarea name="feedback" rows="3"></textarea>
+    {% endif %}
 
-        <div>
-            <label>4. Canteen Satisfaction Rating *</label>
-            {{ form.canteen_quality }}
-            {% for error in form.canteen_quality.errors %}
-                <span>{{ error }}</span>
-            {% endfor %}
-        </div>
-
-        <div>
-            <label>5. Campus Environment Satisfaction Rating *</label>
-            {{ form.campus_quality }}
-            {% for error in form.campus_quality.errors %}
-                <span>{{ error }}</span>
-            {% endfor %}
-        </div>
-
-        {# 4. Additional Feedback (Optional) #}
-        <div>
-            <label>6. Additional Feedback (Optional)</label>
-            {{ form.feedback }}  {# Native rendering, no custom styling #}
-        </div>
-
-        {# Submit Button #}
-        <div>
-            {{ form.submit }}
-        </div>
-    </form>
+    <br><br>
+    <button type="submit">Submit</button>
+</form>
 {% endblock %}

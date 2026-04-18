@@ -148,6 +148,7 @@
         <a href="{{ url_for('more_search') }}">Advanced Search</a> |  <!-- ========== Modified: Add | separator ========== -->
         {% if current_user.role == 'teacher' %}
            <a href="{{ url_for('file_upload') }}">File Upload</a> |        <!-- ========== Modified: Add | separator ========== -->
+           <a href="{{ url_for('survey_template') }}">Edit Survey</a> |
         {% endif %}
         <a href="{{ url_for('downloads') }}">Downloads</a> |
         <a href="{{ url_for('survey') }}">Survey</a>  <!-- Added: Survey entry link -->

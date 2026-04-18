@@ -6,8 +6,8 @@ from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, SurveyResponse
-from app.forms import SupportMessageForm, TeacherUpload, SurveyForm
+from app.models import SupportMessage, SurveyResponse, SurveyTemplate
+from app.forms import SupportMessageForm, TeacherUpload, SurveyForm, SurveyTemplateForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
@@ -15,7 +15,6 @@ from app.models import User
 from app.forms import RegistrationForm, LoginForm
 from app.ai import generate_message_summary
 from flask import jsonify
-
 
 
 # Register
@@ -108,7 +107,6 @@ def index():
     # Display all messages in descending order of publication date
     support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
 
-
     ai_summary = ""
     if request.method == "POST":
         context = ""
@@ -125,8 +123,8 @@ def index():
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
-        survey_avg=survey_avg ,
-        ai_summary=ai_summary # Added
+        survey_avg=survey_avg,
+        ai_summary=ai_summary  # Added
     )
 
 
@@ -220,7 +218,7 @@ def more_search():
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def file_upload():
-    # Only teachers can upload
+    # Only teachers can upload files
     if current_user.role != "teacher":
         flash("Only teachers can upload files", "danger")
         return redirect(url_for('index'))
@@ -262,16 +260,10 @@ def file_upload():
     # List all files (exclude .gitkeep) for downloading
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    # Get filename from request args for download
+    # Get filename from request args
     filename = request.args.get('filename')
     # Render template for form, uploads and downloads
     return render_template("upload.html", form=form, filename=filename, files=files)
-
-
-"""
-Clicking the Download link triggers a GET request with the filename in the URL. 
-Flask passes this filename to the download_file route, which returns the file to the browser as a download.
-"""
 
 
 @app.route('/uploads/<filename>')
@@ -285,12 +277,10 @@ def download_file(filename):
         environ=request.environ)
 
 
-# Choose a file to download from uploaded files list
 @app.route('/downloads')
 @login_required
 def downloads():
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    # List all files (exclude .gitkeep) and sort in reverse order
     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
     files.sort(reverse=True)
     return render_template('downloads.html', files=files)
@@ -299,32 +289,44 @@ def downloads():
 @app.route('/survey', methods=['GET', 'POST'])
 @login_required
 def survey():
-    form = SurveyForm()
+    template = SurveyTemplate.query.first()
+    if not template:
+        template = SurveyTemplate(
+            title="Teaching Quality Survey",
+            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
+        )
+        db.session.add(template)
+        db.session.commit()
 
-    if form.validate_on_submit():
+    questions = [q.strip() for q in template.questions.split("\n") if q.strip()]
+
+    if request.method == "POST":
         try:
-            # Create survey record
+            data = request.form
             survey_record = SurveyResponse(
-                grade=form.grade.data.strip(),
-                gender=form.gender.data.strip(),
-                teaching_quality=form.teaching_quality.data.strip(),
-                canteen_quality=form.canteen_quality.data.strip(),
-                campus_quality=form.campus_quality.data.strip(),
-                feedback=form.feedback.data.strip() if form.feedback.data else "",
+                grade=data.get("Your Grade", data.get("grade", "")),
+                gender=data.get("Your Gender", ""),
+                teaching_quality=data.get("Teaching Satisfaction", data.get("teaching_quality", "")),
+                canteen_quality=data.get("Canteen Satisfaction", ""),
+                campus_quality=data.get("Campus Environment", ""),
+                feedback=data.get("Additional Feedback", data.get("feedback", "")),
                 user_id=current_user.id
             )
-
             db.session.add(survey_record)
             db.session.commit()
-            flash("Teaching quality survey submitted successfully! Thank you for your feedback.", "success")
-            return redirect(url_for('index'))
-
-        except SQLAlchemyError as e:
+            flash("Survey submitted!", "success")
+            return redirect(url_for("index"))
+        except Exception as e:
             db.session.rollback()
-            flash(f"Failed to submit survey: {str(e)}", "danger")
+            flash(f"Error: {str(e)}", "danger")
 
-    return render_template('survey.html', title='Teaching Quality Survey', form=form)
-
+    form = SurveyForm()
+    return render_template(
+        "survey.html",
+        title=template.title,
+        questions=questions,
+        form=form
+    )
 
 @app.route('/survey_results')
 @login_required
@@ -361,3 +363,31 @@ def survey_results():
         grade_stats=grade_stats,
         avg_quality=avg_quality_final
     )
+
+
+# ====================== [New Feature] Teachers can edit questionnaires ======================
+@app.route("/survey/template", methods=["GET", "POST"])
+@login_required
+def survey_template():
+    if current_user.role != "teacher":
+        flash("Only teachers can edit survey", "danger")
+        return redirect(url_for("index"))
+
+    template = SurveyTemplate.query.first()
+    if not template:
+        template = SurveyTemplate(
+            title="Teaching Quality Survey",
+            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
+        )
+        db.session.add(template)
+        db.session.commit()
+
+    form = SurveyTemplateForm(obj=template)
+    if form.validate_on_submit():
+        template.title = form.title.data
+        template.questions = form.questions.data
+        db.session.commit()
+        flash("Survey updated successfully!", "success")
+        return redirect(url_for("survey_template"))
+
+    return render_template("survey_template.html", form=form)

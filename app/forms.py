@@ -209,3 +209,9 @@ class LoginForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
+
+# ====================== [new]teacher adapt survey ======================
+class SurveyTemplateForm(FlaskForm):
+    title = StringField("Survey Title", validators=[DataRequired()])
+    questions = TextAreaField("Survey Questions (one question per line)", validators=[DataRequired()])
+    submit = SubmitField("Save Survey")

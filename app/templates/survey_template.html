@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Edit Survey (Teacher Only)</h1>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.title.label }}<br>
+        {{ form.title(size=60, style="width:100%; padding:8px;") }}
+    </p>
+    <p>
+        {{ form.questions.label }}<br>
+        {{ form.questions(rows=12, cols=60, style="width:100%; padding:8px;") }}
+    </p>
+    <p>{{ form.submit(style="padding:8px 16px; background:green; color:white; border:none; border-radius:4px;") }}</p>
+</form>
+{% endblock %}
