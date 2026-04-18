@@ -13,9 +13,8 @@ class User(UserMixin, db.Model):
     email: so.Mapped[str] = so.mapped_column(sa.String(120), unique=True, index=True, nullable=False)
     password_hash: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
     role: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False, default="student")
+    school_id: so.Mapped[str] = so.mapped_column(sa.String(50), unique=True, index=True, nullable=True)
     messages: so.WriteOnlyMapped[list["SupportMessage"]] = so.relationship(back_populates="author")
-    homeworks: so.WriteOnlyMapped[list["Homework"]] = so.relationship(back_populates="student")
-    appointments: so.WriteOnlyMapped[list["Appointment"]] = so.relationship(back_populates="student")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -53,7 +52,7 @@ class SupportMessage(db.Model):
     deadline: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
     #User ID
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-    #aAuthor
+    #Author
     author: so.Mapped["User"] = so.relationship(back_populates="messages")
 
     def __repr__(self):
@@ -75,6 +74,10 @@ class SurveyResponse(db.Model):
     # Teaching satisfaction rating (1-5, stored as string for flexibility, indexed, non-nullable)
     teaching_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
 
+    canteen_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+
+    campus_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+
     # Additional feedback (optional text, max length 1000, nullable, default empty string)
     feedback: so.Mapped[str] = so.mapped_column(sa.String(1000), nullable=True, default="")
 
@@ -85,59 +88,19 @@ class SurveyResponse(db.Model):
         default=lambda: datetime.now(timezone.utc)
     )
 
+    # User ID
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+
     def __repr__(self):
         # Consistent __repr__ format with SupportMessage for debugging convenience
         return f'<SurveyResponse {self.id} - {self.grade} ({self.gender})>'
 # ===================== End of addition =====================
-
-
-# ===================== Added: Homework Submission Model =====================
-class Homework(db.Model):
+# ====================== [new]teacher adapt survey======================
+class SurveyTemplate(db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    # Student who submitted
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-    student: so.Mapped["User"] = so.relationship(back_populates="homeworks")
-    # Course name
-    course_name: so.Mapped[str] = so.mapped_column(sa.String(256), index=True, nullable=False)
-    # Homework title
-    title: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
-    # Description / notes
-    description: so.Mapped[str] = so.mapped_column(sa.String(1000), nullable=True, default="")
-    # Uploaded filename (optional)
-    filename: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=True, default="")
-    # Submission timestamp
-    submitted_at: so.Mapped[datetime] = so.mapped_column(
-        sa.DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc)
-    )
+    title: so.Mapped[str] = so.mapped_column(sa.String(200), default="Teaching Quality Survey")
+    questions: so.Mapped[str] = so.mapped_column(sa.Text, default="")  # 所有问题
+    updated_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def __repr__(self):
-        return f'<Homework {self.id} - {self.title} by user {self.user_id}>'
-
-
-# ===================== Added: Appointment Booking Model =====================
-class Appointment(db.Model):
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    # Student who booked
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-    student: so.Mapped["User"] = so.relationship(back_populates="appointments")
-    # Teacher name
-    teacher_name: so.Mapped[str] = so.mapped_column(sa.String(128), nullable=False)
-    # Subject / reason
-    subject: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
-    # Preferred date
-    appointment_date: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False)
-    # Preferred time slot
-    time_slot: so.Mapped[str] = so.mapped_column(sa.String(50), nullable=False)
-    # Additional notes
-    notes: so.Mapped[str] = so.mapped_column(sa.String(500), nullable=True, default="")
-    # Status: pending / confirmed / cancelled
-    status: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False, default="pending")
-    # Created timestamp
-    created_at: so.Mapped[datetime] = so.mapped_column(
-        sa.DateTime, nullable=False,
-        default=lambda: datetime.now(timezone.utc)
-    )
-
-    def __repr__(self):
-        return f'<Appointment {self.id} - {self.subject} on {self.appointment_date}>'
+        return f"<SurveyTemplate {self.title}>"

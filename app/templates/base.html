@@ -3,57 +3,32 @@
 <head>
     <meta charset="UTF-8">
     {% if title %}
-        <title>{{ title }} - Student Support System</title>
+        <title>{{ title }} - Database Example</title>
     {% else %}
-        <title>Student Support System</title>
+        <title>Welcome to an introduction to databases</title>
     {% endif %}
 </head>
 <body>
-    <div style="padding: 10px; background: #f5f5f5; margin-bottom: 10px;">
+    <div style="padding: 10px; background: #f5f5f5; margin-bottom: 20px;">
         {% if current_user.is_authenticated %}
             <span>Welcome, {{ current_user.username }}!</span> |
             <a href="{{ url_for('logout') }}">Logout</a>
-            <br>Role: {{ current_user.role }}
         {% else %}
             <a href="{{ url_for('login') }}">Login</a> |
             <a href="{{ url_for('register') }}">Register</a>
         {% endif %}
     </div>
-    {% if current_user.is_authenticated %}
-    <div style="padding: 8px 10px; background: #e9ecef; margin-bottom: 10px;">
-        <a href="{{ url_for('index') }}">Home</a> |
-        <a href="{{ url_for('listing_messages') }}">Messages</a> |
-        <a href="{{ url_for('search_messages') }}">Search</a> |
-        <a href="{{ url_for('more_search') }}">Advanced Search</a> |
-        <a href="{{ url_for('downloads') }}">Downloads</a>
-        {% if current_user.role == 'teacher' %}
-            | <a href="{{ url_for('file_upload') }}">Upload Files</a>
-            | <a href="{{ url_for('manage_homeworks') }}">Review Homeworks</a>
-            | <a href="{{ url_for('manage_appointments') }}">Manage Appointments</a>
-        {% else %}
-            | <a href="{{ url_for('submit_homework') }}">Submit Homework</a>
-            | <a href="{{ url_for('book_appointment') }}">Book Appointment</a>
-            | <a href="{{ url_for('survey') }}">Survey</a>
-        {% endif %}
-    </div>
-    {% endif %}
     <hr>
-    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% with messages = get_flashed_messages() %}
         {% if messages %}
-            {% for category, message in messages %}
-                <div style="
-                    padding: 12px;
-                    margin: 10px 0;
-                    border-radius: 4px;
-                    color: white;
-                    background-color: {{ '#28a745' if category == 'success' else '#dc3545' }};
-                ">
-                    {{ message }}
-                </div>
+        <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
             {% endfor %}
+        </ul>
         {% endif %}
     {% endwith %}
-    <main>{% block content %}{% endblock %}</main>
+    <main>{% block content %}    {% endblock %}</main>
 
 </body>
 </html>

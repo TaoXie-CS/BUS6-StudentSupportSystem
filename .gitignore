@@ -13,3 +13,11 @@ app/uploads/
 # Ignore editor and OS-specific files
 .vscode/
 .DS_Store
+
+*.db
+app.db
+instance/
+__pycache__/
+*.pyc
+.env
+venv/

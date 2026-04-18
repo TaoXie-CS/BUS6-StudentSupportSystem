@@ -1,6 +1,4 @@
 import os
-import uuid
-import logging
 from datetime import datetime
 
 from flask import render_template, redirect, url_for, flash, request, current_app, json
@@ -8,47 +6,38 @@ from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, SurveyResponse, User, Homework, Appointment
-from app.forms import (SupportMessageForm, TeacherUpload, SurveyForm,
-                       RegistrationForm, LoginForm, HomeworkForm, AppointmentForm)
+from app.models import SupportMessage, SurveyResponse, SurveyTemplate
+from app.forms import SupportMessageForm, TeacherUpload, SurveyForm, SurveyTemplateForm
 from sqlalchemy import func, cast, Float
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
+from app.models import User
+from app.forms import RegistrationForm, LoginForm
+from app.ai import generate_message_summary
+from flask import jsonify
 
-logger = logging.getLogger(__name__)
 
 # Register
-@app.route("/register", methods=['GET','POST'])
+@app.route("/register", methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        # Check for duplicate username or email
-        if User.query.filter_by(username=form.username.data).first():
-            flash("Username already exists. Please choose another.", "danger")
-            return render_template('register.html', form=form)
-        if User.query.filter_by(email=form.email.data).first():
-            flash("Email already registered. Please use another.", "danger")
-            return render_template('register.html', form=form)
-        try:
-            user = User(
-                username=form.username.data,
-                email=form.email.data,
-                role=form.role.data
-            )
-            user.set_password(form.password.data)
-            db.session.add(user)
-            db.session.commit()
-            flash("Registration successful! Please login.", "success")
-            return redirect(url_for('login'))
-        except IntegrityError:
-            db.session.rollback()
-            flash("Registration failed. Username or email already in use.", "danger")
+        user = User(
+            username=form.username.data,
+            email=form.email.data,
+            role=form.role.data
+        )
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
+
 # Login
-@app.route("/login", methods=['GET','POST'])
+@app.route("/login", methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
@@ -57,16 +46,17 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember.data)
-            flash("Login successful!", "success")
             return redirect(url_for('index'))
-        flash("Login failed. Please check your email and password.", "danger")
+        flash("Login failed")
     return render_template('login.html', form=form)
+
 
 # Logout
 @app.route("/logout")
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
 
 # Home page: submit and display all messages
 @app.route('/', methods=['GET', 'POST'])
@@ -75,7 +65,7 @@ def index():
     form = SupportMessageForm()
 
     if form.validate_on_submit():
-        #Only teachers could create message
+        # Only teachers could create message
         if current_user.role != "teacher":
             flash("Only teachers can post messages", "danger")
             return redirect(url_for('index'))
@@ -110,37 +100,47 @@ def index():
             func.avg(cast(SurveyResponse.teaching_quality, Float))
         ).scalar()
         survey_avg = round(avg_quality, 1) if avg_quality else 0
-    except Exception as e:
-        logger.warning("Failed to compute survey average: %s", e)
+    except:
         survey_avg = 0
     # ========== End of addition ==========
 
     # Display all messages in descending order of publication date
     support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
 
-    # ========== Modified: Pass survey_total/survey_avg to template ==========
+    ai_summary = ""
+    if request.method == "POST":
+        context = ""
+        for msg in support_messages:
+            context += f"Course:{msg.course_name} Title:{msg.message_title} Priority:{msg.priority}\n"
+
+        if not context:
+            ai_summary = "⚠️ No messages yet. Please add some first."
+        else:
+            ai_summary = generate_message_summary(context)
     return render_template(
         'index.html',
         current_user=current_user,
         form=form,
         student_infos=support_messages,
         survey_total=survey_total,  # Added
-        survey_avg=survey_avg       # Added
+        survey_avg=survey_avg,
+        ai_summary=ai_summary  # Added
     )
 
 
 # List page: Display all messages in descending order of priority
-@app.route('/listing')
+@app.route('/listing', methods=['GET', 'POST'])
 @login_required
 def listing_messages():
     # In descending order of priority (with high priority first)
     messages = SupportMessage.query.order_by(SupportMessage.priority.desc()).all()
-    logger.info("Number of messages retrieved: %d", len(messages))
+    print("Number of messages retrieved：", len(messages))
+    print("Message details：", messages)
     return render_template('listing.html', students=messages)
 
 
 # Search page: Search for messages by teacher email
-@app.route('/searching')
+@app.route('/searching', methods=['GET', 'POST'])
 @login_required
 def search_messages():
     email = request.args.get("email", "").strip().lower()
@@ -172,7 +172,7 @@ def search_messages():
 
 
 # Advanced search: by priority/ranking/average score (priority)
-@app.route('/more_searching')
+@app.route('/more_searching', methods=['GET', 'POST'])
 @login_required
 def more_search():
     query = SupportMessage.query
@@ -203,8 +203,7 @@ def more_search():
     try:
         avg_priority = db.session.query(func.avg(SupportMessage.priority)).scalar()
         avg_priority_final = round(avg_priority, 0) if avg_priority else 0
-    except Exception as e:
-        logger.warning("Failed to compute avg priority: %s", e)
+    except:
         avg_priority_final = 0
 
     return render_template(
@@ -219,7 +218,7 @@ def more_search():
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def file_upload():
-    #Only teachers can upload
+    # Only teachers can upload files
     if current_user.role != "teacher":
         flash("Only teachers can upload files", "danger")
         return redirect(url_for('index'))
@@ -237,43 +236,34 @@ def file_upload():
 
     # Save upload data to json file
     if form.validate_on_submit():
-        # Get uploaded file and save to uploads directory FIRST
-        uploaded_file = form.file.data
-        saved_filename = None
-        if uploaded_file:
-            raw_name = secure_filename(uploaded_file.filename)
-            if not raw_name:
-                raw_name = 'unnamed_file'
-            name, ext = os.path.splitext(raw_name)
-            saved_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
-            uploaded_folder = current_app.config['UPLOAD_FOLDER']
-            uploaded_file.save(os.path.join(uploaded_folder, saved_filename))
-        # Now save metadata with correct filename
         upload_data = {
             "teacher_name": form.teacher_name.data,
             "course_name": form.course_name.data,
             "remark": form.remark.data,
-            "filename": saved_filename,
+            "filename": filename,
             "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         feedback_store.append(upload_data)
-        with open(file_path, "w") as f:
-            json.dump(feedback_store, f, indent=4)
-        flash("File uploaded successfully!", "success")
-        return redirect(url_for("file_upload", filename=saved_filename))
+        with open(file_path, "w") as file:
+            json.dump(feedback_store, file, indent=4)
+        # Get uploaded file and save to uploads directory
+        file = form.file.data
+        # Handle file upload, then prepare for listing files and downloading
+        if file:
+            filename = secure_filename(
+                file.filename)  # secure_filename ensures safe filename storage
+            uploaded_folder = current_app.config[
+                'UPLOAD_FOLDER']  # Get upload folder from app config
+            file.save(os.path.join(uploaded_folder, filename))
+            flash("File uploaded successfully!")
+            return redirect(url_for("file_upload", filename=filename))
     # List all files (exclude .gitkeep) for downloading
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    # Get filename from request args for download
+    # Get filename from request args
     filename = request.args.get('filename')
     # Render template for form, uploads and downloads
     return render_template("upload.html", form=form, filename=filename, files=files)
-
-
-"""
-Clicking the Download link triggers a GET request with the filename in the URL. 
-Flask passes this filename to the download_file route, which returns the file to the browser as a download.
-"""
 
 
 @app.route('/uploads/<filename>')
@@ -283,15 +273,14 @@ def download_file(filename):
     return send_from_directory(
         uploaded_folder,
         filename,
-        as_attachment=True)
+        as_attachment=True,
+        environ=request.environ)
 
 
-# Choose a file to download from uploaded files list
 @app.route('/downloads')
 @login_required
 def downloads():
     uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    # List all files (exclude .gitkeep) and sort in reverse order
     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
     files.sort(reverse=True)
     return render_template('downloads.html', files=files)
@@ -300,53 +289,67 @@ def downloads():
 @app.route('/survey', methods=['GET', 'POST'])
 @login_required
 def survey():
-    form = SurveyForm()
+    template = SurveyTemplate.query.first()
+    if not template:
+        template = SurveyTemplate(
+            title="Teaching Quality Survey",
+            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
+        )
+        db.session.add(template)
+        db.session.commit()
 
-    if form.validate_on_submit():
+    questions = [q.strip() for q in template.questions.split("\n") if q.strip()]
+
+    if request.method == "POST":
         try:
-            # Create survey record (reuse SupportMessage data processing logic)
+            data = request.form
             survey_record = SurveyResponse(
-                grade=form.grade.data.strip(),
-                gender=form.gender.data.strip(),
-                teaching_quality=form.teaching_quality.data.strip(),
-                feedback=form.feedback.data.strip() if form.feedback.data else ""
+                grade=data.get("Your Grade", data.get("grade", "")),
+                gender=data.get("Your Gender", ""),
+                teaching_quality=data.get("Teaching Satisfaction", data.get("teaching_quality", "")),
+                canteen_quality=data.get("Canteen Satisfaction", ""),
+                campus_quality=data.get("Campus Environment", ""),
+                feedback=data.get("Additional Feedback", data.get("feedback", "")),
+                user_id=current_user.id
             )
-
             db.session.add(survey_record)
             db.session.commit()
-            # Flash message (consistent style with existing features: success/danger)
-            flash("Teaching quality survey submitted successfully! Thank you for your feedback.", "success")
-            return redirect(url_for('index'))  # Redirect to homepage after submission
+            flash("Survey submitted!", "success")
+            return redirect(url_for("index"))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error: {str(e)}", "danger")
 
-        except SQLAlchemyError as e:
-            db.session.rollback()  # Reuse existing error rollback logic
-            flash(f"Failed to submit survey: {str(e)}", "danger")
+    form = SurveyForm()
+    return render_template(
+        "survey.html",
+        title=template.title,
+        questions=questions,
+        form=form
+    )
 
-    # Render survey page for GET requests
-    return render_template('survey.html', title='Teaching Quality Survey', form=form)
-
-
-# Optional: Survey results page (backend feature, reuse more_search statistics logic)
 @app.route('/survey_results')
 @login_required
 def survey_results():
-    # Query all survey responses (sorted by submission time descending)
+    if current_user.role != "teacher":
+        flash("You are not allowed to view survey results!", "danger")
+        return redirect(url_for('index'))
+
     survey_responses = SurveyResponse.query.order_by(SurveyResponse.submitted_at.desc()).all()
 
-    # Statistics data (reuse func.avg/func.count logic from more_search)
     try:
-        # Total survey submissions
         total_surveys = SurveyResponse.query.count()
-        # Submission count by grade
         grade_stats = db.session.query(
             SurveyResponse.grade,
             func.count(SurveyResponse.id)
         ).group_by(SurveyResponse.grade).all()
-        # ========== Modified: Explicitly convert string to Float (fix average calculation) ==========
-        avg_quality = db.session.query(
-            func.avg(cast(SurveyResponse.teaching_quality, Float))
-        ).scalar()
-        avg_quality_final = round(avg_quality, 1) if avg_quality else 0
+
+        avg_teaching = db.session.query(func.avg(cast(SurveyResponse.teaching_quality, Float))).scalar() or 0
+        avg_canteen = db.session.query(func.avg(cast(SurveyResponse.canteen_quality, Float))).scalar() or 0
+        avg_campus = db.session.query(func.avg(cast(SurveyResponse.campus_quality, Float))).scalar() or 0
+
+        avg_quality_final = round((avg_teaching + avg_canteen + avg_campus) / 3, 1)
+
     except Exception as e:
         total_surveys = 0
         grade_stats = []
@@ -362,159 +365,29 @@ def survey_results():
     )
 
 
-# Submit Homework page
-@app.route('/submit_homework', methods=['GET', 'POST'])
+# ====================== [New Feature] Teachers can edit questionnaires ======================
+@app.route("/survey/template", methods=["GET", "POST"])
 @login_required
-def submit_homework():
-    form = HomeworkForm()
-    if form.validate_on_submit():
-        saved_filename = ""
-        uploaded_file = form.file.data
-        if uploaded_file:
-            raw_name = secure_filename(uploaded_file.filename)
-            if not raw_name:
-                raw_name = 'unnamed_file'
-            name, ext = os.path.splitext(raw_name)
-            saved_filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
-            uploaded_folder = current_app.config['UPLOAD_FOLDER']
-            uploaded_file.save(os.path.join(uploaded_folder, saved_filename))
-        try:
-            hw = Homework(
-                user_id=current_user.id,
-                course_name=form.course_name.data.strip(),
-                title=form.title.data.strip(),
-                description=form.description.data.strip() if form.description.data else "",
-                filename=saved_filename
-            )
-            db.session.add(hw)
-            db.session.commit()
-            flash("Homework submitted successfully!", "success")
-            return redirect(url_for('submit_homework'))
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(f"Error submitting homework: {str(e)}", "danger")
-    # Show student's own submissions
-    my_homeworks = Homework.query.filter_by(user_id=current_user.id).order_by(Homework.submitted_at.desc()).all()
-    return render_template('submit_homework.html', form=form, homeworks=my_homeworks)
+def survey_template():
+    if current_user.role != "teacher":
+        flash("Only teachers can edit survey", "danger")
+        return redirect(url_for("index"))
 
-
-# Book Appointment page
-@app.route('/book_appointment', methods=['GET', 'POST'])
-@login_required
-def book_appointment():
-    form = AppointmentForm()
-    if form.validate_on_submit():
-        try:
-            appt = Appointment(
-                user_id=current_user.id,
-                teacher_name=form.teacher_name.data.strip(),
-                subject=form.subject.data.strip(),
-                appointment_date=form.appointment_date.data,
-                time_slot=form.time_slot.data,
-                notes=form.notes.data.strip() if form.notes.data else ""
-            )
-            db.session.add(appt)
-            db.session.commit()
-            flash("Appointment booked successfully!", "success")
-            return redirect(url_for('book_appointment'))
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(f"Error booking appointment: {str(e)}", "danger")
-    # Show student's own appointments
-    my_appointments = Appointment.query.filter_by(user_id=current_user.id).order_by(Appointment.created_at.desc()).all()
-    return render_template('book_appointment.html', form=form, appointments=my_appointments)
-
-
-# Teacher: Review all submitted homeworks
-@app.route('/manage_homeworks')
-@login_required
-def manage_homeworks():
-    if current_user.role != 'teacher':
-        flash("Only teachers can access this page.", "danger")
-        return redirect(url_for('index'))
-    all_homeworks = (
-        Homework.query
-        .join(User)
-        .order_by(Homework.submitted_at.desc())
-        .all()
-    )
-    return render_template('manage_homeworks.html', homeworks=all_homeworks)
-
-
-# Teacher: Manage student appointments
-@app.route('/manage_appointments')
-@login_required
-def manage_appointments():
-    if current_user.role != 'teacher':
-        flash("Only teachers can access this page.", "danger")
-        return redirect(url_for('index'))
-    all_appointments = (
-        Appointment.query
-        .join(User)
-        .order_by(Appointment.created_at.desc())
-        .all()
-    )
-    return render_template('manage_appointments.html', appointments=all_appointments)
-
-
-# Teacher: Confirm an appointment
-@app.route('/confirm_appointment/<int:appt_id>', methods=['POST'])
-@login_required
-def confirm_appointment(appt_id):
-    if current_user.role != 'teacher':
-        flash("Only teachers can confirm appointments.", "danger")
-        return redirect(url_for('index'))
-    appt = db.session.get(Appointment, appt_id)
-    if not appt:
-        flash("Appointment not found.", "danger")
-        return redirect(url_for('manage_appointments'))
-    appt.status = 'confirmed'
-    db.session.commit()
-    flash(f"Appointment with {appt.student.username} confirmed.", "success")
-    return redirect(url_for('manage_appointments'))
-
-
-# Teacher: Cancel an appointment
-@app.route('/cancel_appointment/<int:appt_id>', methods=['POST'])
-@login_required
-def cancel_appointment(appt_id):
-    if current_user.role != 'teacher':
-        flash("Only teachers can cancel appointments.", "danger")
-        return redirect(url_for('index'))
-    appt = db.session.get(Appointment, appt_id)
-    if not appt:
-        flash("Appointment not found.", "danger")
-        return redirect(url_for('manage_appointments'))
-    appt.status = 'cancelled'
-    db.session.commit()
-    flash(f"Appointment with {appt.student.username} cancelled.", "success")
-    return redirect(url_for('manage_appointments'))
-
-
-# Delete message (teacher can only delete own messages)
-@app.route('/delete_message/<int:msg_id>', methods=['POST'])
-@login_required
-def delete_message(msg_id):
-    msg = SupportMessage.query.get_or_404(msg_id)
-    if msg.user_id != current_user.id:
-        flash("You can only delete your own messages.", "danger")
-        return redirect(url_for('index'))
-    try:
-        db.session.delete(msg)
+    template = SurveyTemplate.query.first()
+    if not template:
+        template = SurveyTemplate(
+            title="Teaching Quality Survey",
+            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
+        )
+        db.session.add(template)
         db.session.commit()
-        flash("Message deleted successfully.", "success")
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        flash(f"Error deleting message: {str(e)}", "danger")
-    return redirect(url_for('index'))
 
+    form = SurveyTemplateForm(obj=template)
+    if form.validate_on_submit():
+        template.title = form.title.data
+        template.questions = form.questions.data
+        db.session.commit()
+        flash("Survey updated successfully!", "success")
+        return redirect(url_for("survey_template"))
 
-# Custom error pages
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
+    return render_template("survey_template.html", form=form)

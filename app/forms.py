@@ -1,7 +1,9 @@
 from datetime import date
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, PasswordField, BooleanField
-from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo
+from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, \
+    SelectMultipleField, PasswordField, BooleanField
+from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo, ValidationError
+from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
 
 
@@ -97,21 +99,21 @@ class TeacherUpload(FlaskForm):
 
     submit = SubmitField("Upload File")
 
+
 class SurveyForm(FlaskForm):
     # Grade selection dropdown (consistent with existing field naming/validation style)
     grade = SelectField(
         "Your Grade",
         choices=[
-            ("", "Please select your grade"),  # Placeholder prompt
-            ("Junior 1", "Junior 1"),
-            ("Junior 2", "Junior 2"),
-            ("Junior 3", "Junior 3"),
-            ("Senior 1", "Senior 1"),
-            ("Senior 2", "Senior 2"),
-            ("Senior 3", "Senior 3")
+            ("", "Please select your grade"),
+            ("Freshman", "Freshman"),
+            ("Sophomore", "Sophomore"),
+            ("Junior", "Junior"),
+            ("Senior", "Senior"),
+            ("Graduate", "Graduate")
         ],
         validators=[
-            DataRequired(message="Grade is required")  # Validation message consistent with existing style
+            DataRequired(message="Grade is required")
         ]
     )
 
@@ -140,6 +142,38 @@ class SurveyForm(FlaskForm):
         ]
     )
 
+    # ====================== 【canteen satisfaction】 ======================
+    canteen_quality = SelectField(
+        "Canteen Satisfaction Rating",
+        choices=[
+            ("", "Please rate canteen quality"),
+            ("5", "5 - Very Satisfied"),
+            ("4", "4 - Satisfied"),
+            ("3", "3 - Average"),
+            ("2", "2 - Dissatisfied"),
+            ("1", "1 - Very Dissatisfied")
+        ],
+        validators=[
+            DataRequired(message="Canteen satisfaction rating is required")
+        ]
+    )
+
+    # ====================== 【environment】 ======================
+    campus_quality = SelectField(
+        "Campus Environment Satisfaction Rating",
+        choices=[
+            ("", "Please rate campus environment"),
+            ("5", "5 - Very Satisfied"),
+            ("4", "4 - Satisfied"),
+            ("3", "3 - Average"),
+            ("2", "2 - Dissatisfied"),
+            ("1", "1 - Very Dissatisfied")
+        ],
+        validators=[
+            DataRequired(message="Campus environment satisfaction rating is required")
+        ]
+    )
+
     # Additional feedback (optional, consistent with TeacherUpload's remark style)
     feedback = TextAreaField(
         "Additional Feedback (optional)",
@@ -152,10 +186,12 @@ class SurveyForm(FlaskForm):
     # Submit button (consistent naming style with existing buttons)
     submit = SubmitField("Submit Survey")
 
-#Registration
+
+# Registration
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
+    school_id = StringField('School ID', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
 
@@ -167,68 +203,30 @@ class RegistrationForm(FlaskForm):
 
     submit = SubmitField('Register')
 
-#  Login
+    def validate_school_id(self, field):
+        #Upper Case
+        sid = field.data.strip().upper()
+
+        #student
+        if self.role.data == "student":
+            if not sid.startswith("S"):
+                raise ValidationError("Student ID must start with 'S' → example：S2026001")
+
+        #teacher
+        if self.role.data == "teacher":
+            if not sid.startswith("T"):
+                raise ValidationError("Teacher ID must start with 'T' → example：T2026001")
+
+
+# Login
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
-
-# Homework Submission Form (Student)
-class HomeworkForm(FlaskForm):
-    course_name = StringField(
-        "Course Name",
-        validators=[DataRequired(message="Course name is required"), Length(max=256)]
-    )
-    title = StringField(
-        "Homework Title",
-        validators=[DataRequired(message="Title is required"), Length(max=256)]
-    )
-    description = TextAreaField(
-        "Description (optional)",
-        validators=[Length(max=1000)]
-    )
-    file = FileField(
-        "Attachment (PDF, DOCX, ZIP, JPG, PNG)",
-        validators=[
-            FileAllowed(['pdf', 'docx', 'doc', 'jpg', 'png', 'zip', 'txt'], "Only documents allowed")
-        ]
-    )
-    submit = SubmitField("Submit Homework")
-
-
-# Appointment Booking Form (Student)
-class AppointmentForm(FlaskForm):
-    teacher_name = StringField(
-        "Teacher Name",
-        validators=[DataRequired(message="Teacher name is required"), Length(max=128)]
-    )
-    subject = StringField(
-        "Subject / Reason",
-        validators=[DataRequired(message="Subject is required"), Length(max=256)]
-    )
-    appointment_date = DateField(
-        "Preferred Date",
-        format="%Y-%m-%d",
-        validators=[DataRequired(message="Date is required")]
-    )
-    time_slot = SelectField(
-        "Preferred Time Slot",
-        choices=[
-            ("", "Please select a time slot"),
-            ("09:00-10:00", "09:00 - 10:00"),
-            ("10:00-11:00", "10:00 - 11:00"),
-            ("11:00-12:00", "11:00 - 12:00"),
-            ("13:00-14:00", "13:00 - 14:00"),
-            ("14:00-15:00", "14:00 - 15:00"),
-            ("15:00-16:00", "15:00 - 16:00"),
-            ("16:00-17:00", "16:00 - 17:00"),
-        ],
-        validators=[DataRequired(message="Time slot is required")]
-    )
-    notes = TextAreaField(
-        "Additional Notes (optional)",
-        validators=[Length(max=500)]
-    )
-    submit = SubmitField("Book Appointment")
+# ====================== [new]teacher adapt survey ======================
+class SurveyTemplateForm(FlaskForm):
+    title = StringField("Survey Title", validators=[DataRequired()])
+    questions = TextAreaField("Survey Questions (one question per line)", validators=[DataRequired()])
+    submit = SubmitField("Save Survey")
