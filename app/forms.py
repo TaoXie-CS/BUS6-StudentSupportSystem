@@ -200,8 +200,22 @@ class RegistrationForm(FlaskForm):
         choices=[("student", "Student"), ("teacher", "Teacher")],
         validators=[DataRequired()]
     )
+    teacher_type = SelectField(
+        "Teacher Type",
+        choices=[
+            ("", "Select Teacher Type"),
+            ("lecturer", "Lecturer"),
+            ("wellbeing_adviser", "Wellbeing Adviser"),
+            ("careers_adviser", "Careers Adviser")
+        ],
+        validators=[]
+    )
 
     submit = SubmitField('Register')
+
+    def validate_teacher_type(self, field):
+        if self.role.data == "teacher" and not field.data:
+            raise ValidationError("You must select a teacher type")
 
     def validate_school_id(self, field):
         #Upper Case

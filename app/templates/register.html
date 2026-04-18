@@ -47,10 +47,17 @@
 
     <p>
         {{ form.role.label }}<br>
-        {{ form.role() }}
+        {{ form.role(style="padding:6px;", onchange="toggleTeacherType()") }}
         {% for error in form.role.errors %}
             <span style="color: red;">[{{ error }}]</span>
         {% endfor %}
+    </p>
+    <p id="teacherTypeSection" style="display: none;">
+        {{ form.teacher_type.label }}<br>
+        {{ form.teacher_type(style=" padding: 8px;") }}
+        {% for error in form.teacher_type.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
     </p>
 
     <p>
@@ -59,5 +66,16 @@
 </form>
 
 <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
-
+<script>
+function toggleTeacherType() {
+    let role = document.querySelector('#role').value;
+    let section = document.querySelector('#teacherTypeSection');
+    if (role === 'teacher') {
+        section.style.display = 'block';
+    } else {
+        section.style.display = 'none';
+    }
+}
+window.onload = toggleTeacherType;
+</script>
 {% endblock %}
