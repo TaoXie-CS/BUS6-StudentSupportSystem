@@ -12,4 +12,5 @@ email-validator==2.0.0
 # 1. create a new virtual environment -> python -m venv venv
 # 2. activate it -> venv\Scripts\activate (or activate.ps1 in powershell)
 # 3. please type 'pip install -r requirements.txt' before you start coding
-# 4. please type 'flask shell', then type 'db.create_all()' before you run project
+# 4. please type 'flask shell', then type 'db.create_all()',
+# then copy and paste all content from origin_data.txt to initialize the data before you run project
