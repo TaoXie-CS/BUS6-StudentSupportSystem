@@ -6,10 +6,10 @@ from datetime import date
 # ========================
 # 1. users：2teacher + 2student(password:123456)
 # ========================
-u1 = User(username="sam", email="sam@school.com", role="teacher", school_id="T2026001")
+u1 = User(username="sam", email="sam@school.com", role="teacher", school_id="T2026001", teacher_type="lecturer")
 u1.set_password("123456")
 
-u2 = User(username="lora", email="lora@school.com", role="teacher", school_id="T2026002")
+u2 = User(username="lora", email="lora@school.com", role="teacher", school_id="T2026002", teacher_type="lecturer")
 u2.set_password("123456")
 
 u3 = User(username="tom", email="tom@school.com", role="student", school_id="S2026001")
