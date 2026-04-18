@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
     email: so.Mapped[str] = so.mapped_column(sa.String(120), unique=True, index=True, nullable=False)
     password_hash: so.Mapped[str] = so.mapped_column(sa.String(256), nullable=False)
     role: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False, default="student")
-    student_id: so.Mapped[str] = so.mapped_column(sa.String(50), unique=True, index=True, nullable=True)
+    school_id: so.Mapped[str] = so.mapped_column(sa.String(50), unique=True, index=True, nullable=True)
     messages: so.WriteOnlyMapped[list["SupportMessage"]] = so.relationship(back_populates="author")
 
     def set_password(self, password):
