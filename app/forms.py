@@ -2,7 +2,7 @@ from datetime import date
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, DateField, IntegerField, TextAreaField, SelectField, RadioField, \
     SelectMultipleField, PasswordField, BooleanField
-from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo
+from wtforms.validators import DataRequired, Length, Email, NumberRange, EqualTo, ValidationError
 from wtforms.widgets import ListWidget, CheckboxInput
 from flask_wtf.file import FileField, FileAllowed
 
@@ -191,6 +191,7 @@ class SurveyForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(max=64)])
     email = StringField('Email', validators=[DataRequired(), Email()])
+    school_id = StringField('School ID', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
 
@@ -201,6 +202,20 @@ class RegistrationForm(FlaskForm):
     )
 
     submit = SubmitField('Register')
+
+    def validate_school_id(self, field):
+        #Upper Case
+        sid = field.data.strip().upper()
+
+        #student
+        if self.role.data == "student":
+            if not sid.startswith("S"):
+                raise ValidationError("Student ID must start with 'S' → example：S2026001")
+
+        #teacher
+        if self.role.data == "teacher":
+            if not sid.startswith("T"):
+                raise ValidationError("Teacher ID must start with 'T' → example：T2026001")
 
 
 # Login

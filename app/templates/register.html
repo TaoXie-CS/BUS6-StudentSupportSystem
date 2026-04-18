@@ -21,6 +21,13 @@
             <span style="color: red;">[{{ error }}]</span>
         {% endfor %}
     </p>
+    <p>
+    {{ form.school_id.label }}<br>
+    {{ form.school_id(size=64, style="width: 100%; padding: 8px;") }}
+    {% for error in form.school_id.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+    {% endfor %}
+</p>
 
     <p>
         {{ form.password.label }}<br>
