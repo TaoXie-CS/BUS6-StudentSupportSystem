@@ -145,32 +145,11 @@
     <div style="margin-top: 20px;">
         <a href="{{ url_for('listing_messages') }}">View All Messages (Sorted by Priority)</a> |
         <a href="{{ url_for('search_messages') }}">Search Messages</a> |
-        <a href="{{ url_for('more_search') }}">Advanced Search</a> |  <!-- ========== Modified: Add | separator ========== -->
+        <a href="{{ url_for('more_search') }}">Advanced Search</a> |
         {% if current_user.role == 'teacher' %}
-           <a href="{{ url_for('file_upload') }}">File Upload</a> |        <!-- ========== Modified: Add | separator ========== -->
-           <a href="{{ url_for('survey_template') }}">Edit Survey</a> |
+           <a href="{{ url_for('file_upload') }}">File Upload</a> |
         {% endif %}
         <a href="{{ url_for('downloads') }}">Downloads</a> |
-        <a href="{{ url_for('survey') }}">Survey</a>  <!-- Added: Survey entry link -->
+        <a href="{{ url_for('survey') }}">Survey</a>
     </div>
-
-
-    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-
-    <!-- Survey Results Title -->
-    <h2>Teaching Quality Survey Results</h2>
-
-    <!-- Simple Statistics Module: Total Submissions + Average Rating -->
-    <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; max-width: 600px;">
-        <p><strong>Total Survey Submissions:</strong> {{ survey_total or 0 }}</p>
-        <p><strong>Average Satisfaction Rating:</strong> {{ survey_avg or 0 }} / 5</p>
-    </div>
-
-    <!-- View Detailed Results Button -->
-    <div style="margin: 10px 0;">
-        <a href="{{ url_for('survey_results') }}" style="padding: 8px 16px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">
-            View Detailed Survey Results
-        </a>
-    </div>
-
 {% endblock %}

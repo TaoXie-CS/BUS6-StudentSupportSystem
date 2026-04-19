@@ -9,7 +9,6 @@ from flask_wtf.file import FileField, FileAllowed
 
 # Support Message Submission Form (Core business form)
 class SupportMessageForm(FlaskForm):
-
     course_name = StringField(
         "Course Name",
         validators=[
@@ -73,7 +72,6 @@ class SupportMessageForm(FlaskForm):
 
 # Teacher File Upload Form
 class TeacherUpload(FlaskForm):
-
     teacher_name = StringField(
         "Your Full Name",
         validators=[DataRequired()]
@@ -100,10 +98,11 @@ class TeacherUpload(FlaskForm):
     submit = SubmitField("Upload File")
 
 
-class SurveyForm(FlaskForm):
-    # Grade selection dropdown (consistent with existing field naming/validation style)
+# ====================== [Modified] Student Survey Forms ======================
+class SurveyBasicInfoForm(FlaskForm):
+    """Grade and Major Information Form"""
     grade = SelectField(
-        "Your Grade",
+        "Grade",
         choices=[
             ("", "Please select your grade"),
             ("Freshman", "Freshman"),
@@ -112,79 +111,184 @@ class SurveyForm(FlaskForm):
             ("Senior", "Senior"),
             ("Graduate", "Graduate")
         ],
-        validators=[
-            DataRequired(message="Grade is required")
-        ]
+        validators=[DataRequired(message="Please select your grade")]
     )
 
-    # Gender selection (radio buttons)
-    gender = RadioField(
-        "Your Gender",
-        choices=[("Male", "Male"), ("Female", "Female")],
+    major = StringField(
+        "Major",
         validators=[
-            DataRequired(message="Gender is required")
-        ]
+            DataRequired(message="Please enter your major"),
+            Length(max=100, message="Major name cannot exceed 100 characters")
+        ],
+        render_kw={"placeholder": "Enter your major"}
     )
 
-    # Teaching satisfaction rating dropdown
-    teaching_quality = SelectField(
-        "Teaching Satisfaction Rating",
+    submit = SubmitField("Confirm")
+
+
+class SurveyTypeForm(FlaskForm):
+    """Survey Type Selection Form"""
+    survey_type = SelectField(
+        "Please select survey type",
         choices=[
-            ("", "Please rate teaching quality"),
-            ("5", "5 - Very Satisfied"),
-            ("4", "4 - Satisfied"),
-            ("3", "3 - Average"),
-            ("2", "2 - Dissatisfied"),
-            ("1", "1 - Very Dissatisfied")
+            ("", "Please select survey type"),
+            ("learning", "Learning Situation Survey"),
+            ("management", "School Management Satisfaction Survey"),
+            ("teaching", "Teacher Teaching Satisfaction Survey")
         ],
-        validators=[
-            DataRequired(message="Teaching satisfaction rating is required")
-        ]
+        validators=[DataRequired(message="Please select survey type")]
     )
 
-    # ====================== 【canteen satisfaction】 ======================
-    canteen_quality = SelectField(
-        "Canteen Satisfaction Rating",
+    submit = SubmitField("Start Survey")
+
+
+class LearningSurveyForm(FlaskForm):
+    """Learning Situation Survey Form"""
+    course_schedule = SelectField(
+        "Course Schedule Satisfaction",
         choices=[
-            ("", "Please rate canteen quality"),
-            ("5", "5 - Very Satisfied"),
-            ("4", "4 - Satisfied"),
-            ("3", "3 - Average"),
-            ("2", "2 - Dissatisfied"),
-            ("1", "1 - Very Dissatisfied")
+            ("", "Please select satisfaction level"),
+            ("5", "Very Satisfied"),
+            ("4", "Satisfied"),
+            ("3", "Average"),
+            ("2", "Dissatisfied"),
+            ("1", "Very Dissatisfied")
         ],
-        validators=[
-            DataRequired(message="Canteen satisfaction rating is required")
-        ]
+        validators=[DataRequired(message="Please select course schedule satisfaction")]
     )
 
-    # ====================== 【environment】 ======================
-    campus_quality = SelectField(
-        "Campus Environment Satisfaction Rating",
+    course_quality = SelectField(
+        "Course Quality",
         choices=[
-            ("", "Please rate campus environment"),
-            ("5", "5 - Very Satisfied"),
-            ("4", "4 - Satisfied"),
-            ("3", "3 - Average"),
-            ("2", "2 - Dissatisfied"),
-            ("1", "1 - Very Dissatisfied")
+            ("", "Please select course quality evaluation"),
+            ("5", "Excellent"),
+            ("4", "Good"),
+            ("3", "Average"),
+            ("2", "Poor"),
+            ("1", "Very Poor")
         ],
-        validators=[
-            DataRequired(message="Campus environment satisfaction rating is required")
-        ]
+        validators=[DataRequired(message="Please select course quality evaluation")]
     )
 
-    # Additional feedback (optional, consistent with TeacherUpload's remark style)
-    feedback = TextAreaField(
-        "Additional Feedback (optional)",
-        validators=[
-            Length(max=1000, message="Feedback cannot exceed 1000 characters")
+    knowledge_mastery = SelectField(
+        "Knowledge Mastery Level",
+        choices=[
+            ("", "Please select mastery level"),
+            ("5", "Completely Mastered"),
+            ("4", "Mostly Mastered"),
+            ("3", "Partially Mastered"),
+            ("2", "Insufficient Mastery"),
+            ("1", "Not Mastered")
         ],
-        render_kw={"placeholder": "Enter your suggestions or comments here"}
+        validators=[DataRequired(message="Please select knowledge mastery level")]
     )
 
-    # Submit button (consistent naming style with existing buttons)
-    submit = SubmitField("Submit Survey")
+    other_learning = TextAreaField(
+        "Additional Comments (Optional)",
+        validators=[Length(max=500, message="Additional comments cannot exceed 500 characters")],
+        render_kw={"rows": 4, "placeholder": "Enter other comments or suggestions about learning situation..."}
+    )
+
+    submit = SubmitField("Submit")
+
+
+class ManagementSurveyForm(FlaskForm):
+    """School Management Satisfaction Survey Form"""
+    campus_cleanliness = SelectField(
+        "Campus Cleanliness",
+        choices=[
+            ("", "Please select satisfaction level"),
+            ("5", "Very Clean"),
+            ("4", "Clean"),
+            ("3", "Average"),
+            ("2", "Not Clean"),
+            ("1", "Very Unclean")
+        ],
+        validators=[DataRequired(message="Please select campus cleanliness evaluation")]
+    )
+
+    cafeteria = SelectField(
+        "Cafeteria Food and Environment",
+        choices=[
+            ("", "Please select satisfaction level"),
+            ("5", "Very Satisfied"),
+            ("4", "Satisfied"),
+            ("3", "Average"),
+            ("2", "Dissatisfied"),
+            ("1", "Very Dissatisfied")
+        ],
+        validators=[DataRequired(message="Please select cafeteria satisfaction")]
+    )
+
+    holiday_arrangement = SelectField(
+        "Holiday Arrangement",
+        choices=[
+            ("", "Please select satisfaction level"),
+            ("5", "Very Reasonable"),
+            ("4", "Reasonable"),
+            ("3", "Average"),
+            ("2", "Unreasonable"),
+            ("1", "Very Unreasonable")
+        ],
+        validators=[DataRequired(message="Please select holiday arrangement satisfaction")]
+    )
+
+    student_activities = SelectField(
+        "Student Activities Richness",
+        choices=[
+            ("", "Please select satisfaction level"),
+            ("5", "Very Rich"),
+            ("4", "Rich"),
+            ("3", "Average"),
+            ("2", "Insufficient"),
+            ("1", "Very Insufficient")
+        ],
+        validators=[DataRequired(message="Please select student activities richness evaluation")]
+    )
+
+    other_management = TextAreaField(
+        "Additional Comments (Optional)",
+        validators=[Length(max=500, message="Additional comments cannot exceed 500 characters")],
+        render_kw={"rows": 4, "placeholder": "Enter other comments or suggestions about school management..."}
+    )
+
+    submit = SubmitField("Submit")
+
+
+class TeachingSurveyForm(FlaskForm):
+    """Teacher Teaching Satisfaction Survey Form"""
+    teacher_responsibility = RadioField(
+        "Is the teacher responsible?",
+        choices=[
+            ("yes", "Yes"),
+            ("no", "No")
+        ],
+        validators=[DataRequired(message="Please select if the teacher is responsible")]
+    )
+
+    teaching_satisfaction = RadioField(
+        "Are you satisfied with the teaching?",
+        choices=[
+            ("yes", "Yes"),
+            ("no", "No")
+        ],
+        validators=[DataRequired(message="Please select if you are satisfied with the teaching")]
+    )
+
+    # Only show when not satisfied
+    dissatisfaction_reason = TextAreaField(
+        "Reasons for dissatisfaction (Please fill if not satisfied)",
+        validators=[Length(max=500, message="Comments cannot exceed 500 characters")],
+        render_kw={"rows": 4, "placeholder": "Please specify the reasons for dissatisfaction with teaching..."}
+    )
+
+    other_teaching = TextAreaField(
+        "Other Comments (Optional)",
+        validators=[Length(max=500, message="Additional comments cannot exceed 500 characters")],
+        render_kw={"rows": 4, "placeholder": "Enter other comments or suggestions about teaching..."}
+    )
+
+    submit = SubmitField("Submit")
 
 
 # Registration
@@ -218,15 +322,15 @@ class RegistrationForm(FlaskForm):
             raise ValidationError("You must select a teacher type")
 
     def validate_school_id(self, field):
-        #Upper Case
+        # Upper Case
         sid = field.data.strip().upper()
 
-        #student
+        # student
         if self.role.data == "student":
             if not sid.startswith("S"):
                 raise ValidationError("Student ID must start with 'S' → example：S2026001")
 
-        #teacher
+        # teacher
         if self.role.data == "teacher":
             if not sid.startswith("T"):
                 raise ValidationError("Teacher ID must start with 'T' → example：T2026001")
@@ -239,8 +343,4 @@ class LoginForm(FlaskForm):
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
-# ====================== [new]teacher adapt survey ======================
-class SurveyTemplateForm(FlaskForm):
-    title = StringField("Survey Title", validators=[DataRequired()])
-    questions = TextAreaField("Survey Questions (one question per line)", validators=[DataRequired()])
-    submit = SubmitField("Save Survey")
+# Note: The old SurveyTemplateForm has been removed as requested

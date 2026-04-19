@@ -6,7 +6,8 @@ import sqlalchemy as sa
 from datetime import datetime, date, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
-#User (student / teacher)
+
+# User (student / teacher)
 class User(UserMixin, db.Model):
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     username: so.Mapped[str] = so.mapped_column(sa.String(64), unique=True, index=True, nullable=False)
@@ -25,6 +26,7 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f'<User {self.username}>'
+
 
 # Support Message Model (Core business model)
 class SupportMessage(db.Model):
@@ -51,9 +53,9 @@ class SupportMessage(db.Model):
 
     # Deadline date (date only, no time component, default to current date, non-nullable)
     deadline: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
-    #User ID
+    # User ID
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-    #Author
+    # Author
     author: so.Mapped["User"] = so.relationship(back_populates="messages")
 
     def __repr__(self):
@@ -61,47 +63,47 @@ class SupportMessage(db.Model):
         return f'<SupportMessage {self.id} - {self.message_title} ({self.course_name})>'
 
 
-# ===================== Added: Survey Response Model (Teaching Quality Survey) =====================
-class SurveyResponse(db.Model):
-    # Primary key (consistent style with SupportMessage)
+# ====================== [Modified] New Survey Response Model ======================
+class NewSurveyResponse(db.Model):
+    """New survey response model"""
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    # Grade level (e.g. Junior 1/Senior 3, max length 20, indexed for fast filtering, non-nullable)
-    grade: so.Mapped[str] = so.mapped_column(sa.String(20), index=True, nullable=False)
+    # Student basic information
+    grade: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False)
+    major: so.Mapped[str] = so.mapped_column(sa.String(100), nullable=False)
 
-    # Gender (Male/Female/Other, max length 10, indexed for fast filtering, non-nullable)
-    gender: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+    # Survey type
+    survey_type: so.Mapped[str] = so.mapped_column(sa.String(50), nullable=False)
 
-    # Teaching satisfaction rating (1-5, stored as string for flexibility, indexed, non-nullable)
-    teaching_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+    # Learning situation survey fields
+    course_schedule: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    course_quality: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    knowledge_mastery: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    other_learning: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
 
-    canteen_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+    # School management satisfaction survey fields
+    campus_cleanliness: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    cafeteria: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    holiday_arrangement: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    student_activities: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    other_management: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
 
-    campus_quality: so.Mapped[str] = so.mapped_column(sa.String(10), index=True, nullable=False)
+    # Teacher teaching satisfaction survey fields
+    teacher_responsibility: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    teaching_satisfaction: so.Mapped[str] = so.mapped_column(sa.String(10), nullable=True)
+    dissatisfaction_reason: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
+    other_teaching: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
 
-    # Additional feedback (optional text, max length 1000, nullable, default empty string)
-    feedback: so.Mapped[str] = so.mapped_column(sa.String(1000), nullable=True, default="")
-
-    # Submission timestamp (auto-recorded, timezone-aware datetime, modern best practice, non-nullable)
+    # Submission information
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
     submitted_at: so.Mapped[datetime] = so.mapped_column(
         sa.DateTime,
         nullable=False,
         default=lambda: datetime.now(timezone.utc)
     )
 
-    # User ID
-    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
-
     def __repr__(self):
-        # Consistent __repr__ format with SupportMessage for debugging convenience
-        return f'<SurveyResponse {self.id} - {self.grade} ({self.gender})>'
-# ===================== End of addition =====================
-# ====================== [new]teacher adapt survey======================
-class SurveyTemplate(db.Model):
-    id: so.Mapped[int] = so.mapped_column(primary_key=True)
-    title: so.Mapped[str] = so.mapped_column(sa.String(200), default="Teaching Quality Survey")
-    questions: so.Mapped[str] = so.mapped_column(sa.Text, default="")  # 所有问题
-    updated_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime, default=lambda: datetime.now(timezone.utc))
+        return f'<NewSurveyResponse {self.id} - {self.survey_type} ({self.grade})>'
 
-    def __repr__(self):
-        return f"<SurveyTemplate {self.title}>"
+# Note: Old SurveyResponse and SurveyTemplate models are kept for backward compatibility
+# but are no longer used in the new survey system

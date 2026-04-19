@@ -1,13 +1,14 @@
 import os
 from datetime import datetime
 
-from flask import render_template, redirect, url_for, flash, request, current_app, json
+from flask import render_template, redirect, url_for, flash, request, current_app, json, session
 from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, SurveyResponse, SurveyTemplate
-from app.forms import SupportMessageForm, TeacherUpload, SurveyForm, SurveyTemplateForm
+from app.models import SupportMessage, NewSurveyResponse
+from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
+    ManagementSurveyForm, TeachingSurveyForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
@@ -91,19 +92,6 @@ def index():
             db.session.rollback()  # Rollback transaction on error
             flash(f"Error adding message: {str(e)}", "danger")
 
-    # ========== Added: Query Survey statistics (pass to homepage template) ==========
-    survey_total = SurveyResponse.query.count()  # Total survey submissions
-    survey_avg = None
-    try:
-        # Fixed: Explicitly convert string to Float (replace original cast method)
-        avg_quality = db.session.query(
-            func.avg(cast(SurveyResponse.teaching_quality, Float))
-        ).scalar()
-        survey_avg = round(avg_quality, 1) if avg_quality else 0
-    except:
-        survey_avg = 0
-    # ========== End of addition ==========
-
     # Display all messages in descending order of publication date
     support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
 
@@ -122,9 +110,7 @@ def index():
         current_user=current_user,
         form=form,
         student_infos=support_messages,
-        survey_total=survey_total,  # Added
-        survey_avg=survey_avg,
-        ai_summary=ai_summary  # Added
+        ai_summary=ai_summary
     )
 
 
@@ -286,108 +272,252 @@ def downloads():
     return render_template('downloads.html', files=files)
 
 
+# ====================== [Modified] New Survey System Routes ======================
 @app.route('/survey', methods=['GET', 'POST'])
 @login_required
 def survey():
-    template = SurveyTemplate.query.first()
-    if not template:
-        template = SurveyTemplate(
-            title="Teaching Quality Survey",
-            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
-        )
-        db.session.add(template)
-        db.session.commit()
+    """Survey main entry - redirect based on user role"""
+    if current_user.role != "student":
+        # Teachers and other roles cannot fill out surveys
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
 
-    questions = [q.strip() for q in template.questions.split("\n") if q.strip()]
+    # If basic info already exists, go to type selection
+    if 'survey_grade' in session and 'survey_major' in session:
+        return redirect(url_for('select_survey_type'))
 
-    if request.method == "POST":
+    # Otherwise go to basic info form
+    return redirect(url_for('survey_basic_info'))
+
+
+@app.route('/survey/basic_info', methods=['GET', 'POST'])
+@login_required
+def survey_basic_info():
+    """Fill in grade and major information"""
+    if current_user.role != "student":
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
+
+    form = SurveyBasicInfoForm()
+
+    if form.validate_on_submit():
+        # Save to session
+        session['survey_grade'] = form.grade.data
+        session['survey_major'] = form.major.data
+        flash("Basic information saved, please select survey type", "success")
+        return redirect(url_for('select_survey_type'))
+
+    return render_template('survey_basic_info.html', form=form)
+
+
+@app.route('/survey/select_type', methods=['GET', 'POST'])
+@login_required
+def select_survey_type():
+    """Select survey type"""
+    if current_user.role != "student":
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
+
+    # Check if basic info exists
+    if 'survey_grade' not in session or 'survey_major' not in session:
+        flash("Please fill in basic information first", "warning")
+        return redirect(url_for('survey_basic_info'))
+
+    form = SurveyTypeForm()
+
+    if form.validate_on_submit():
+        survey_type = form.survey_type.data
+        session['survey_type'] = survey_type
+
+        # Redirect to corresponding survey page based on type
+        if survey_type == 'learning':
+            return redirect(url_for('survey_learning'))
+        elif survey_type == 'management':
+            return redirect(url_for('survey_management'))
+        elif survey_type == 'teaching':
+            return redirect(url_for('survey_teaching'))
+
+    return render_template('survey_select_type.html', form=form)
+
+
+@app.route('/survey/learning', methods=['GET', 'POST'])
+@login_required
+def survey_learning():
+    """Learning Situation Survey"""
+    if current_user.role != "student":
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
+
+    # Check if basic info and type exist
+    if 'survey_grade' not in session or 'survey_major' not in session:
+        flash("Please fill in basic information first", "warning")
+        return redirect(url_for('survey_basic_info'))
+
+    if 'survey_type' not in session or session.get('survey_type') != 'learning':
+        flash("Please select survey type first", "warning")
+        return redirect(url_for('select_survey_type'))
+
+    form = LearningSurveyForm()
+
+    if form.validate_on_submit():
         try:
-            data = request.form
-            survey_record = SurveyResponse(
-                grade=data.get("Your Grade", data.get("grade", "")),
-                gender=data.get("Your Gender", ""),
-                teaching_quality=data.get("Teaching Satisfaction", data.get("teaching_quality", "")),
-                canteen_quality=data.get("Canteen Satisfaction", ""),
-                campus_quality=data.get("Campus Environment", ""),
-                feedback=data.get("Additional Feedback", data.get("feedback", "")),
+            # Create new survey response record
+            survey_response = NewSurveyResponse(
+                grade=session['survey_grade'],
+                major=session['survey_major'],
+                survey_type='learning',
+                course_schedule=form.course_schedule.data,
+                course_quality=form.course_quality.data,
+                knowledge_mastery=form.knowledge_mastery.data,
+                other_learning=form.other_learning.data,
                 user_id=current_user.id
             )
-            db.session.add(survey_record)
+
+            db.session.add(survey_response)
             db.session.commit()
-            flash("Survey submitted!", "success")
-            return redirect(url_for("index"))
+
+            # Clear session
+            session.pop('survey_grade', None)
+            session.pop('survey_major', None)
+            session.pop('survey_type', None)
+
+            flash("Learning situation survey submitted successfully! Thank you for your feedback.", "success")
+            return redirect(url_for('index'))
+
         except Exception as e:
             db.session.rollback()
-            flash(f"Error: {str(e)}", "danger")
+            flash(f"Submission failed: {str(e)}", "danger")
 
-    form = SurveyForm()
-    return render_template(
-        "survey.html",
-        title=template.title,
-        questions=questions,
-        form=form
-    )
+    return render_template('survey_learning.html', form=form)
+
+
+@app.route('/survey/management', methods=['GET', 'POST'])
+@login_required
+def survey_management():
+    """School Management Satisfaction Survey"""
+    if current_user.role != "student":
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
+
+    # Check if basic info and type exist
+    if 'survey_grade' not in session or 'survey_major' not in session:
+        flash("Please fill in basic information first", "warning")
+        return redirect(url_for('survey_basic_info'))
+
+    if 'survey_type' not in session or session.get('survey_type') != 'management':
+        flash("Please select survey type first", "warning")
+        return redirect(url_for('select_survey_type'))
+
+    form = ManagementSurveyForm()
+
+    if form.validate_on_submit():
+        try:
+            # Create new survey response record
+            survey_response = NewSurveyResponse(
+                grade=session['survey_grade'],
+                major=session['survey_major'],
+                survey_type='management',
+                campus_cleanliness=form.campus_cleanliness.data,
+                cafeteria=form.cafeteria.data,
+                holiday_arrangement=form.holiday_arrangement.data,
+                student_activities=form.student_activities.data,
+                other_management=form.other_management.data,
+                user_id=current_user.id
+            )
+
+            db.session.add(survey_response)
+            db.session.commit()
+
+            # Clear session
+            session.pop('survey_grade', None)
+            session.pop('survey_major', None)
+            session.pop('survey_type', None)
+
+            flash("School management satisfaction survey submitted successfully! Thank you for your feedback.",
+                  "success")
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Submission failed: {str(e)}", "danger")
+
+    return render_template('survey_management.html', form=form)
+
+
+@app.route('/survey/teaching', methods=['GET', 'POST'])
+@login_required
+def survey_teaching():
+    """Teacher Teaching Satisfaction Survey"""
+    if current_user.role != "student":
+        flash("Only students can fill out surveys", "danger")
+        return redirect(url_for('index'))
+
+    # Check if basic info and type exist
+    if 'survey_grade' not in session or 'survey_major' not in session:
+        flash("Please fill in basic information first", "warning")
+        return redirect(url_for('survey_basic_info'))
+
+    if 'survey_type' not in session or session.get('survey_type') != 'teaching':
+        flash("Please select survey type first", "warning")
+        return redirect(url_for('select_survey_type'))
+
+    form = TeachingSurveyForm()
+
+    if form.validate_on_submit():
+        try:
+            # If not satisfied but reason not filled, prompt user
+            if form.teaching_satisfaction.data == 'no' and not form.dissatisfaction_reason.data:
+                flash("If you are not satisfied with teaching, please fill in the reasons for dissatisfaction",
+                      "warning")
+                return render_template('survey_teaching.html', form=form)
+
+            # Create new survey response record
+            survey_response = NewSurveyResponse(
+                grade=session['survey_grade'],
+                major=session['survey_major'],
+                survey_type='teaching',
+                teacher_responsibility=form.teacher_responsibility.data,
+                teaching_satisfaction=form.teaching_satisfaction.data,
+                dissatisfaction_reason=form.dissatisfaction_reason.data if form.teaching_satisfaction.data == 'no' else None,
+                other_teaching=form.other_teaching.data,
+                user_id=current_user.id
+            )
+
+            db.session.add(survey_response)
+            db.session.commit()
+
+            # Clear session
+            session.pop('survey_grade', None)
+            session.pop('survey_major', None)
+            session.pop('survey_type', None)
+
+            flash("Teacher teaching satisfaction survey submitted successfully! Thank you for your feedback.",
+                  "success")
+            return redirect(url_for('index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Submission failed: {str(e)}", "danger")
+
+    return render_template('survey_teaching.html', form=form)
+
+
+@app.route('/survey/reset')
+@login_required
+def reset_survey():
+    """Reset survey information, start over"""
+    session.pop('survey_grade', None)
+    session.pop('survey_major', None)
+    session.pop('survey_type', None)
+    flash("Survey information reset, please fill in again", "info")
+    return redirect(url_for('survey_basic_info'))
+
 
 @app.route('/survey_results')
 @login_required
 def survey_results():
-    if current_user.role != "teacher":
-        flash("You are not allowed to view survey results!", "danger")
-        return redirect(url_for('index'))
+    # Survey results are not available to anyone
+    flash("Survey results are not available at this time.", "danger")
+    return redirect(url_for('index'))
 
-    survey_responses = SurveyResponse.query.order_by(SurveyResponse.submitted_at.desc()).all()
-
-    try:
-        total_surveys = SurveyResponse.query.count()
-        grade_stats = db.session.query(
-            SurveyResponse.grade,
-            func.count(SurveyResponse.id)
-        ).group_by(SurveyResponse.grade).all()
-
-        avg_teaching = db.session.query(func.avg(cast(SurveyResponse.teaching_quality, Float))).scalar() or 0
-        avg_canteen = db.session.query(func.avg(cast(SurveyResponse.canteen_quality, Float))).scalar() or 0
-        avg_campus = db.session.query(func.avg(cast(SurveyResponse.campus_quality, Float))).scalar() or 0
-
-        avg_quality_final = round((avg_teaching + avg_canteen + avg_campus) / 3, 1)
-
-    except Exception as e:
-        total_surveys = 0
-        grade_stats = []
-        avg_quality_final = 0
-        flash(f"Error loading survey results: {str(e)}", "danger")
-
-    return render_template(
-        'survey_results.html',
-        responses=survey_responses,
-        total=total_surveys,
-        grade_stats=grade_stats,
-        avg_quality=avg_quality_final
-    )
-
-
-# ====================== [New Feature] Teachers can edit questionnaires ======================
-@app.route("/survey/template", methods=["GET", "POST"])
-@login_required
-def survey_template():
-    if current_user.role != "teacher":
-        flash("Only teachers can edit survey", "danger")
-        return redirect(url_for("index"))
-
-    template = SurveyTemplate.query.first()
-    if not template:
-        template = SurveyTemplate(
-            title="Teaching Quality Survey",
-            questions="Your Grade\nYour Gender\nTeaching Satisfaction\nCanteen Satisfaction\nCampus Environment\nAdditional Feedback"
-        )
-        db.session.add(template)
-        db.session.commit()
-
-    form = SurveyTemplateForm(obj=template)
-    if form.validate_on_submit():
-        template.title = form.title.data
-        template.questions = form.questions.data
-        db.session.commit()
-        flash("Survey updated successfully!", "success")
-        return redirect(url_for("survey_template"))
-
-    return render_template("survey_template.html", form=form)
+# ====================== End of Modified Survey System ======================
