@@ -1,12 +1,12 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import render_template, redirect, url_for, flash, request, current_app, json, session
 from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, NewSurveyResponse,MessageRead
+from app.models import SupportMessage, NewSurveyResponse, MessageRead, UploadFile
 from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
     ManagementSurveyForm, TeachingSurveyForm
 from app.models import SupportMessage, TimeSlot, Appointment
@@ -18,6 +18,13 @@ from app.models import User
 from app.forms import RegistrationForm, LoginForm
 from app.ai import generate_message_summary
 from flask import jsonify
+import uuid
+from flask import send_from_directory
+
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED = {'pdf', 'docx', 'doc', 'png', 'jpg', 'zip', 'txt'}
 
 
 # Register
@@ -230,75 +237,152 @@ def more_search():
     )
 
 
-@app.route('/upload', methods=['GET', 'POST'])
+# @app.route('/upload', methods=['GET', 'POST'])
+# @login_required
+# def file_upload():
+#     # Only teachers can upload files
+#     if current_user.role != "teacher":
+#         flash("Only teachers can upload files", "danger")
+#         return redirect(url_for('index'))
+#     # Create an object for upload form
+#     form = TeacherUpload()
+#     filename = None
+#     # Create path for json file to store upload records
+#     file_path = os.path.join(
+#         current_app.root_path, 'static', 'uploads.json')
+#     try:
+#         with open(file_path, "r") as file:
+#             feedback_store = json.load(file)
+#     except FileNotFoundError:
+#         feedback_store = []
+#
+#     # Save upload data to json file
+#     if form.validate_on_submit():
+#         upload_data = {
+#             "teacher_name": form.teacher_name.data,
+#             "course_name": form.course_name.data,
+#             "remark": form.remark.data,
+#             "filename": filename,
+#             "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#         }
+#         feedback_store.append(upload_data)
+#         with open(file_path, "w") as file:
+#             json.dump(feedback_store, file, indent=4)
+#         # Get uploaded file and save to uploads directory
+#         file = form.file.data
+#         # Handle file upload, then prepare for listing files and downloading
+#         if file:
+#             filename = secure_filename(
+#                 file.filename)  # secure_filename ensures safe filename storage
+#             uploaded_folder = current_app.config[
+#                 'UPLOAD_FOLDER']  # Get upload folder from app config
+#             file.save(os.path.join(uploaded_folder, filename))
+#             flash("File uploaded successfully!")
+#             return redirect(url_for("file_upload", filename=filename))
+#     # List all files (exclude .gitkeep) for downloading
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+#     # Get filename from request args
+#     filename = request.args.get('filename')
+#     # Render template for form, uploads and downloads
+#     return render_template("upload.html", form=form, filename=filename, files=files)
+#
+#
+# @app.route('/uploads/<filename>')
+# @login_required
+# def download_file(filename):
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     return send_from_directory(
+#         uploaded_folder,
+#         filename,
+#         as_attachment=True,
+#         environ=request.environ)
+#
+#
+# @app.route('/downloads')
+# @login_required
+# def downloads():
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+#     files.sort(reverse=True)
+#     return render_template('downloads.html', files=files)
+# ====================== FILE UPLOAD / DOWNLOAD / DELETE ======================
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED
+
+# file list
+@app.route('/files')
+@login_required
+def files():
+    # teacher can see own files
+    if current_user.role == "teacher":
+        files = UploadFile.query.filter_by(user_id=current_user.id).order_by(UploadFile.upload_time.desc()).all()
+    else:
+        # student can see all files
+        files = UploadFile.query.order_by(UploadFile.upload_time.desc()).all()
+    return render_template('files.html', files=files)
+
+
+# upload file
+@app.route('/upload', methods=['GET','POST'])
 @login_required
 def file_upload():
-    # Only teachers can upload files
-    if current_user.role != "teacher":
-        flash("Only teachers can upload files", "danger")
-        return redirect(url_for('index'))
-    # Create an object for upload form
+    if current_user.role != 'teacher':
+        flash('Only teachers can upload','danger')
+        return redirect(url_for('files'))
+
     form = TeacherUpload()
-    filename = None
-    # Create path for json file to store upload records
-    file_path = os.path.join(
-        current_app.root_path, 'static', 'uploads.json')
-    try:
-        with open(file_path, "r") as file:
-            feedback_store = json.load(file)
-    except FileNotFoundError:
-        feedback_store = []
-
-    # Save upload data to json file
     if form.validate_on_submit():
-        upload_data = {
-            "teacher_name": form.teacher_name.data,
-            "course_name": form.course_name.data,
-            "remark": form.remark.data,
-            "filename": filename,
-            "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        feedback_store.append(upload_data)
-        with open(file_path, "w") as file:
-            json.dump(feedback_store, file, indent=4)
-        # Get uploaded file and save to uploads directory
-        file = form.file.data
-        # Handle file upload, then prepare for listing files and downloading
-        if file:
-            filename = secure_filename(
-                file.filename)  # secure_filename ensures safe filename storage
-            uploaded_folder = current_app.config[
-                'UPLOAD_FOLDER']  # Get upload folder from app config
-            file.save(os.path.join(uploaded_folder, filename))
-            flash("File uploaded successfully!")
-            return redirect(url_for("file_upload", filename=filename))
-    # List all files (exclude .gitkeep) for downloading
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    # Get filename from request args
-    filename = request.args.get('filename')
-    # Render template for form, uploads and downloads
-    return render_template("upload.html", form=form, filename=filename, files=files)
+        f = form.file.data
+        if f and allowed_file(f.filename):
+            orig = secure_filename(f.filename)
+            ext = orig.rsplit('.',1)[1].lower()
+            stored = f"{uuid.uuid4()}.{ext}"
+            f.save(os.path.join(UPLOAD_FOLDER, stored))
 
+            newfile = UploadFile(
+                filename=orig,
+                stored_name=stored,
+                subject=form.subject.data,
+                teacher_name=form.teacher_name.data,
+                remark=form.remark.data,
+                user_id=current_user.id
+            )
+            db.session.add(newfile)
+            db.session.commit()
+            flash('Upload success!','success')
+            return redirect(url_for('files'))
 
-@app.route('/uploads/<filename>')
+    return render_template('upload.html', form=form)
+
+# download file
+@app.route('/download/<int:file_id>')
 @login_required
-def download_file(filename):
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
+def download_file(file_id):
+    f = UploadFile.query.get_or_404(file_id)
     return send_from_directory(
-        uploaded_folder,
-        filename,
-        as_attachment=True,
-        environ=request.environ)
+        UPLOAD_FOLDER, f.stored_name, as_attachment=True, download_name=f.filename
+    )
 
-
-@app.route('/downloads')
+# delete file
+@app.route('/delete/file/<int:file_id>')
 @login_required
-def downloads():
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    files.sort(reverse=True)
-    return render_template('downloads.html', files=files)
+def delete_file(file_id):
+    f = UploadFile.query.get_or_404(file_id)
+    if f.user_id != current_user.id:
+        flash('You can only delete your own','danger')
+        return redirect(url_for('files'))
+
+    path = os.path.join(UPLOAD_FOLDER, f.stored_name)
+    if os.path.exists(path):
+        os.remove(path)
+
+    db.session.delete(f)
+    db.session.commit()
+    flash('File deleted','success')
+    return redirect(url_for('files'))
 
 
 # ====================== [Modified] New Survey System Routes ======================

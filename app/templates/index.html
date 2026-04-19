@@ -152,7 +152,7 @@
         {% if current_user.role == 'teacher' %}
            <a href="{{ url_for('file_upload') }}">File Upload</a> |
         {% endif %}
-        <a href="{{ url_for('downloads') }}">Downloads</a> |
+        <a href="{{ url_for('files') }}">Files</a>  |
         <a href="{{ url_for('survey') }}">Survey</a>
     </div>
 {% endblock %}

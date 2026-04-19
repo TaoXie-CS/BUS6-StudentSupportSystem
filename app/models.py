@@ -169,3 +169,21 @@ class MessageRead(db.Model):
 
     def __repr__(self):
         return f"<MessageRead user={self.user_id} message={self.message_id}>"
+
+
+class UploadFile(db.Model):
+    __tablename__ = "upload_file"
+
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    stored_name = db.Column(db.String(255), nullable=False)
+    subject = db.Column(db.String(100))
+    teacher_name = db.Column(db.String(100))
+    remark = db.Column(db.Text)
+    upload_time = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    uploader = db.relationship("User", backref="files")
+
+    def __repr__(self):
+        return f"<File {self.filename}>"

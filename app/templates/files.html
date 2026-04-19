@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}All Files{% endblock %}
+
+{% block content %}
+<h1>Course Files</h1>
+
+{% if current_user.role == "teacher" %}
+<a href="{{ url_for('file_upload') }}">Upload File</a><br><br>
+{% endif %}
+
+<table border="1" cellpadding="8" width="100%">
+<tr>
+    <th>File</th><th>Course</th><th>Teacher</th><th>Remark</th><th>Time</th><th>Action</th>
+</tr>
+{% for f in files %}
+<tr>
+    <td>{{ f.filename }}</td>
+    <td>{{ f.subject }}</td>
+    <td>{{ f.teacher_name }}</td>
+    <td>{{ f.remark }}</td>
+    <td>{{ f.upload_time.strftime('%Y-%m-%d %H:%M') }}</td>
+    <td>
+        <a href="{{ url_for('download_file', file_id=f.id) }}">Download</a>
+        {% if current_user.id == f.user_id %}
+         | <a href="{{ url_for('delete_file', file_id=f.id) }}" onclick="return confirm('Delete?')">Delete</a>
+        {% endif %}
+    </td>
+</tr>
+{% endfor %}
+</table>
+
+<br>
+<a href="{{ url_for('index') }}">Home</a>
+{% endblock %}

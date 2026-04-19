@@ -46,8 +46,8 @@ class TeacherUpload(FlaskForm):
         validators=[DataRequired()]
     )
 
-    course_name = StringField(
-        "Course Name",
+    subject = StringField(
+        "subject",
         validators=[DataRequired()]
     )
 
