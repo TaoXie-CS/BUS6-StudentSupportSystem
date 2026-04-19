@@ -26,8 +26,8 @@ db.session.commit()
 # 2. messages：4 messages
 # ========================
 msg1 = SupportMessage(
-    subject="Exam Release Notice",
-    message_content="Python midterm exam will be held next Friday. Please review chapters 1-6.",
+    subject="Python Midterm Exam Details",
+    message_content="The Python midterm is scheduled for next Friday, April 24th, at 2 PM in Room 302. Please focus your revision on Chapters 1-6. Remember to bring your own laptop with the environment pre-installed.",
     urgency="urgent",
     teacher_email="sam@school.com",
     teacher_name="sam",
@@ -37,8 +37,8 @@ msg1 = SupportMessage(
 )
 
 msg2 = SupportMessage(
-    subject="Homework Release Notice",
-    message_content="Please finish Java OOP homework and submit before next Wednesday.",
+    subject="Java Project Workshop Tasks",
+    message_content="For next Wednesday's workshop: 1. Complete the Java OOP design patterns exercise. 2. Submit your group member list via email. 3. Read the project rubric attached. No late submissions will be accepted.",
     urgency="non-urgent",
     teacher_email="sam@school.com",
     teacher_name="sam",
@@ -48,8 +48,8 @@ msg2 = SupportMessage(
 )
 
 msg3 = SupportMessage(
-    subject="Exam Release Notice",
-    message_content="Computer Science final exam arrangement released. Check details.",
+    subject="Computer Science Final Exam Resources",
+    message_content="Final exam arrangement is now on the portal. I have uploaded 3 past papers in the attachments. Please download them and complete the practice sessions by May 1st. Join the Q&A Zoom session this Sunday if you have questions.",
     urgency="urgent",
     teacher_email="lora@school.com",
     teacher_name="lora",
@@ -59,9 +59,9 @@ msg3 = SupportMessage(
 )
 
 msg4 = SupportMessage(
-    subject="Homework Release Notice",
-    message_content="ML model training assignment is now published. Please submit on time.",
-    urgency="non-urgent",
+    subject="ML Assignment Submission Urgent Update",
+    message_content="Urgent: The ML model training server will undergo maintenance this weekend. Please submit your assignments before Saturday midnight. If you face issues, contact Lora immediately via email.",
+    urgency="urgent", # 调成 urgent 看看 AI 反应
     teacher_email="lora@school.com",
     teacher_name="lora",
     teacher_school_id="T2026002",
