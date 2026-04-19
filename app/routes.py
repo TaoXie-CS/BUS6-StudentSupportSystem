@@ -9,6 +9,8 @@ from app import db
 from app.models import SupportMessage, NewSurveyResponse
 from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
     ManagementSurveyForm, TeachingSurveyForm
+from app.models import SupportMessage, SurveyResponse, SurveyTemplate, TimeSlot, Appointment
+from app.forms import SupportMessageForm, TeacherUpload, SurveyForm, SurveyTemplateForm, AppointmentForm, TimeSlotForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
@@ -28,7 +30,8 @@ def register():
         user = User(
             username=form.username.data,
             email=form.email.data,
-            role=form.role.data
+            role=form.role.data,
+            teacher_type=form.teacher_type.data if form.role.data == "teacher" else ""  # 确保保存
         )
         user.set_password(form.password.data)
         db.session.add(user)
@@ -521,3 +524,208 @@ def survey_results():
     return redirect(url_for('index'))
 
 # ====================== End of Modified Survey System ======================
+    return render_template("survey_template.html", form=form)
+
+
+# ====================== Appointment System Routes ======================
+
+@app.route('/appointment', methods=['GET', 'POST'])
+@login_required
+def appointment():
+    """学生预约主页"""
+    if current_user.role != "student":
+        flash("只有学生可以预约", "danger")
+        return redirect(url_for('index'))
+
+    form = AppointmentForm()
+    return render_template('appointment.html', form=form)
+
+
+@app.route('/api/teachers/<teacher_type>')
+@login_required
+def get_teachers(teacher_type):
+    """根据老师类型返回老师列表"""
+    teachers = User.query.filter_by(
+        role="teacher",
+        teacher_type=teacher_type
+    ).all()
+    return jsonify([{
+        'id': t.id,
+        'username': t.username,
+        'email': t.email
+    } for t in teachers])
+
+
+@app.route('/api/available_dates/<int:teacher_id>')
+@login_required
+def get_available_dates(teacher_id):
+    """获取老师有可用时间段的日期列表"""
+    from datetime import date
+
+    # 查询该老师有可用时间段且未约满的日期
+    available_dates = db.session.query(TimeSlot.date).filter(
+        TimeSlot.teacher_id == teacher_id,
+        TimeSlot.is_booked == False
+    ).distinct().all()
+
+    # 过滤掉所有时间段都被约满的日期
+    result = []
+    for (date_obj,) in available_dates:
+        total_slots = TimeSlot.query.filter_by(
+            teacher_id=teacher_id,
+            date=date_obj
+        ).count()
+        booked_slots = TimeSlot.query.filter_by(
+            teacher_id=teacher_id,
+            date=date_obj,
+            is_booked=True
+        ).count()
+        if total_slots > booked_slots:
+            result.append(date_obj.strftime('%Y-%m-%d'))
+
+    return jsonify(result)
+
+
+@app.route('/api/time_slots/<int:teacher_id>/<date_str>')
+@login_required
+def get_time_slots(teacher_id, date_str):
+    """获取指定日期的可用时间段"""
+    from datetime import datetime
+    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    slots = TimeSlot.query.filter_by(
+        teacher_id=teacher_id,
+        date=date_obj
+    ).order_by(TimeSlot.time_slot).all()
+
+    return jsonify([{
+        'id': s.id,
+        'time': s.time_slot,
+        'is_booked': s.is_booked
+    } for s in slots])
+
+
+@app.route('/appointment/submit', methods=['POST'])
+@login_required
+def submit_appointment():
+    """提交预约申请"""
+    if current_user.role != "student":
+        return jsonify({'success': False, 'message': '权限不足'})
+
+    data = request.get_json()
+    time_slot_id = data.get('time_slot_id')
+    description = data.get('description', '')
+    appointment_type = data.get('appointment_type')
+
+    # 检查时间段是否已被预约
+    time_slot = TimeSlot.query.get(time_slot_id)
+    if not time_slot or time_slot.is_booked:
+        return jsonify({'success': False, 'message': '该时间段已被预约'})
+
+    # 创建预约记录
+    appointment = Appointment(
+        student_id=current_user.id,
+        teacher_id=time_slot.teacher_id,
+        time_slot_id=time_slot_id,
+        appointment_type=appointment_type,
+        description=description,
+        status='pending'
+    )
+
+    # 标记时间段为已预约
+    time_slot.is_booked = True
+
+    db.session.add(appointment)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': '预约申请已提交，等待老师确认'
+    })
+
+
+@app.route('/my_appointments')
+@login_required
+def my_appointments():
+    """查看我的预约"""
+    if current_user.role == "teacher":
+        appointments = Appointment.query.filter_by(
+            teacher_id=current_user.id
+        ).order_by(Appointment.created_at.desc()).all()
+    else:
+        appointments = Appointment.query.filter_by(
+            student_id=current_user.id
+        ).order_by(Appointment.created_at.desc()).all()
+    return render_template('my_appointments.html', appointments=appointments)
+
+
+@app.route('/appointment/<int:appointment_id>/<action>', methods=['POST'])
+@login_required
+def handle_appointment(appointment_id, action):
+    """老师确认/拒绝预约"""
+    appointment = Appointment.query.get_or_404(appointment_id)
+
+    if current_user.id != appointment.teacher_id:
+        flash("无权操作", "danger")
+        return redirect(url_for('index'))
+
+    if action == 'confirm':
+        appointment.status = 'confirmed'
+        flash("预约已确认", "success")
+    elif action == 'reject':
+        appointment.status = 'rejected'
+        # 释放时间段
+        appointment.time_slot.is_booked = False
+        flash("预约已拒绝", "info")
+
+    db.session.commit()
+    return redirect(url_for('my_appointments'))
+
+
+@app.route('/teacher/time_slots', methods=['GET', 'POST'])
+@login_required
+def manage_time_slots():
+    """老师管理可预约时间段"""
+    if current_user.role != "teacher":
+        flash("只有老师可以管理时间段", "danger")
+        return redirect(url_for('index'))
+
+    form = TimeSlotForm()
+
+    if form.validate_on_submit():
+        date = form.date.data
+        selected_slots = form.time_slots.data
+
+        # 检查是否已存在这些时间段
+        existing_slots = TimeSlot.query.filter_by(
+            teacher_id=current_user.id,
+            date=date
+        ).all()
+        existing_times = {s.time_slot for s in existing_slots}
+
+        added_count = 0
+        for slot_time in selected_slots:
+            if slot_time not in existing_times:
+                new_slot = TimeSlot(
+                    teacher_id=current_user.id,
+                    date=date,
+                    time_slot=slot_time,
+                    is_booked=False
+                )
+                db.session.add(new_slot)
+                added_count += 1
+
+        if added_count > 0:
+            db.session.commit()
+            flash(f"成功添加 {added_count} 个时间段", "success")
+        else:
+            flash("所选时间段已存在", "info")
+
+        return redirect(url_for('manage_time_slots'))
+
+    # 获取老师已设置的时间段
+    my_slots = TimeSlot.query.filter_by(
+        teacher_id=current_user.id
+    ).order_by(TimeSlot.date.desc(), TimeSlot.time_slot).all()
+
+    return render_template('manage_time_slots.html', form=form, slots=my_slots)
+# ====================== End of Appointment Routes ======================

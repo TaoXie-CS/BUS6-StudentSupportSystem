@@ -343,4 +343,71 @@ class LoginForm(FlaskForm):
     remember = BooleanField('Remember Me')
     submit = SubmitField('Login')
 
-# Note: The old SurveyTemplateForm has been removed as requested
+# ====================== [new]teacher adapt survey ======================
+class SurveyTemplateForm(FlaskForm):
+    title = StringField("Survey Title", validators=[DataRequired()])
+    questions = TextAreaField("Survey Questions (one question per line)", validators=[DataRequired()])
+    submit = SubmitField("Save Survey")
+
+
+# ====================== Appointment Form ======================
+class AppointmentForm(FlaskForm):
+    """学生预约表单"""
+    appointment_type = SelectField(
+        "预约类型",
+        choices=[
+            ("", "请选择预约类型"),
+            ("lecturer", "学生辅导课程预约"),
+            ("wellbeing_adviser", "学生心理咨询预约"),
+            ("careers_adviser", "就业指导服务预约"),
+            ("academic_consultation", "学生学业问题咨询预约")
+        ],
+        validators=[DataRequired(message="请选择预约类型")]
+    )
+    teacher_type = SelectField(
+        "选择老师",
+        choices=[],
+        validators=[DataRequired(message="请选择老师")],
+        coerce=int
+    )
+    date = DateField(
+        "预约日期",
+        format="%Y-%m-%d",
+        validators=[DataRequired(message="请选择日期")]
+    )
+    time_slot_id = SelectField(
+        "时间段",
+        choices=[],
+        validators=[DataRequired(message="请选择时间段")],
+        coerce=int
+    )
+    description = TextAreaField(
+        "问题描述 / 需求说明",
+        validators=[Length(max=500, message="描述不能超过500字符")]
+    )
+    submit = SubmitField("提交预约申请")
+
+
+class TimeSlotForm(FlaskForm):
+    """老师设置可预约时间段表单"""
+    date = DateField(
+        "日期",
+        format="%Y-%m-%d",
+        validators=[DataRequired(message="请选择日期")]
+    )
+    time_slots = SelectMultipleField(
+        "可用时间段",
+        choices=[
+            ("09:00-10:00", "09:00-10:00"),
+            ("10:00-11:00", "10:00-11:00"),
+            ("11:00-12:00", "11:00-12:00"),
+            ("14:00-15:00", "14:00-15:00"),
+            ("15:00-16:00", "15:00-16:00"),
+            ("16:00-17:00", "16:00-17:00")
+        ],
+        validators=[DataRequired(message="请至少选择一个时间段")],
+        widget=ListWidget(prefix_label=False),
+        option_widget=CheckboxInput()
+    )
+    submit = SubmitField("添加时间段")
+# ====================== End of Appointment Form ======================

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h1>管理预约时间段</h1>
+
+    <!-- 添加新时间段表单 -->
+    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+        <h2>添加可用时间段</h2>
+        <form method="POST" action="{{ url_for('manage_time_slots') }}">
+            {{ form.hidden_tag() }}
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: bold;">{{ form.date.label }}</label>
+                {{ form.date(style="width: 100%; padding: 10px; font-size: 16px;", min=today) }}
+                {% if form.date.errors %}
+                    <div style="color: #f44336; margin-top: 5px;">
+                        {% for error in form.date.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: bold;">{{ form.time_slots.label }}</label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    {% for subfield in form.time_slots %}
+                    <label style="display: flex; align-items: center; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        {{ subfield(style="margin-right: 8px;", required=False) }}
+                        <span>{{ subfield.label.text }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% if form.time_slots.errors %}
+                    <div style="color: #f44336; margin-top: 5px;">
+                        {% for error in form.time_slots.errors %}{{ error }}{% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.submit(style="padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px;") }}
+            </div>
+        </form>
+    </div>
+
+    <!-- 已设置的时间段列表 -->
+    <h2>已设置的时间段</h2>
+    {% if slots %}
+        <div style="margin-top: 20px;">
+            {% set current_date = namespace(value='') %}
+            {% for slot in slots %}
+                {% if slot.date.strftime('%Y-%m-%d') != current_date.value %}
+                    {% set current_date.value = slot.date.strftime('%Y-%m-%d') %}
+                    <div style="margin-top: 25px; margin-bottom: 10px;">
+                        <h3 style="color: #2196F3; border-bottom: 2px solid #2196F3; padding-bottom: 5px;">
+                            {{ slot.date.strftime('%Y年%m月%d日') }} {{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][slot.date.weekday()] }}
+                        </h3>
+                    </div>
+                {% endif %}
+
+                <div style="display: inline-block; margin: 5px;">
+                    {% if slot.is_booked %}
+                    <span style="display: inline-block; padding: 10px 20px; border-radius: 20px; font-size: 14px; background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;">
+                        {{ slot.time_slot }} (已预约)
+                    </span>
+                    {% else %}
+                    <span style="display: inline-block; padding: 10px 20px; border-radius: 20px; font-size: 14px; background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;">
+                        {{ slot.time_slot }} (可预约)
+                    </span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: #666; background: #fafafa; border-radius: 8px; margin-top: 20px;">
+            <div style="font-size: 48px; margin-bottom: 15px;">📅</div>
+            <p>您还没有设置任何可预约时间段</p>
+            <p style="font-size: 14px;">请在上方添加时间段，学生才能向您发起预约</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+</style>
+
+<script>
+// 设置日期选择器的最小值为今天
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[type="date"]');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+    }
+});
+</script>
+{% endblock %}
