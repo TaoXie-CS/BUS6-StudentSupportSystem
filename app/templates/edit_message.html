@@ -1,55 +1,65 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Edit Message</h2>
-<form method="POST" enctype="multipart/form-data">
-    {{ form.hidden_tag() }}
-    <p>
-        {{ form.subject.label }}<br>
-        {{ form.subject(size=70, style="padding:6px; width:100%;") }}
-    </p>
-    <p>
-        {{ form.message_content.label }}<br>
-        {{ form.message_content(rows=6, cols=70, style="padding:6px; width:100%;") }}
-    </p>
-    <p>
-        {{ form.urgency.label }}<br>
-        {{ form.urgency(style="padding:6px;") }}
-    </p>
+<div style="max-width: 900px; margin: 40px auto; padding: 30px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f0f0f0;">
 
+    <h2 style="font-size: 26px; font-weight: bold; color: #222; margin-bottom: 25px;">Edit Message</h2>
 
-    {% if message.files %}
-    <div style="padding:10px; background:#f8f9fa; border-radius:6px;">
-        <strong>Attachments:</strong>
-        <ul style="margin:5px 0;padding-left:20px;">
-            {% for file in message.files %}
-            <li>
-                <!-- ✅ 这里加上下载链接！我只改了这一行！ -->
-                <a href="{{ url_for('download_file', file_id=file.id) }}">
-                    {{ file.filename }}
-                </a>
+    <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
 
-                <a href="{{ url_for('delete_file_msg', file_id=file.id) }}"
-                   style="color:red; font-size:12px;"
-                   onclick="return confirm('Delete?')">
-                    Delete
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
-    <br>
-    {% endif %}
+        <div style="margin-bottom: 20px;">
+            {{ form.subject.label(style="font-weight: bold; font-size: 15px; display: block; margin-bottom: 6px;") }}
+            {{ form.subject(size=70, style="padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; background:#fafbfc;") }}
+        </div>
 
+        <div style="margin-bottom: 20px;">
+            {{ form.message_content.label(style="font-weight: bold; font-size: 15px; display: block; margin-bottom: 6px;") }}
+            {{ form.message_content(rows=6, cols=70, style="padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; line-height: 1.5; background:#fafbfc;") }}
+        </div>
 
-    <p>
-        Add new attachments:<br>
-        <input type="file" name="files" multiple>
-    </p>
+        <div style="margin-bottom: 20px;">
+            {{ form.urgency.label(style="font-weight: bold; font-size: 15px; display: block; margin-bottom: 6px;") }}
+            {{ form.urgency(style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; background:#fafbfc;") }}
+        </div>
 
-    <p>
-        {{ form.submit(style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px;") }}
-        <a href="{{ url_for('index') }}" style="margin-left:10px;">Cancel</a>
-    </p>
-</form>
+        {% if message and message.files %}
+        <div style="padding: 18px; background: #f8f9fa; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef;">
+            <strong style="font-size: 15px; font-weight: bold;">Attachments:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                {% for file in message.files %}
+                <li style="margin-bottom: 6px; display: flex; align-items: center; gap: 12px;">
+                    <a href="{{ url_for('download_file', file_id=file.id) }}"
+                       style="padding: 6px 12px; background: #e6f4ea; color: #28a745; border-radius: 6px; text-decoration: none; font-weight: bold;">
+                        📎 {{ file.filename }}
+                    </a>
+                    <a href="{{ url_for('delete_file_msg', file_id=file.id) }}"
+                       style="color: white; background: #dc3545; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold;"
+                       onclick="return confirm('Delete this file?')">
+                        Delete
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div style="margin-bottom: 25px;">
+            <label style="font-weight: bold; font-size: 15px; display: block; margin-bottom: 8px;">Add new attachments:</label>
+            <input type="file" name="files" multiple style="font-size: 14px;">
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px;">
+            {{ form.submit(style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 15px; cursor: pointer;") }}
+            <a href="{{ url_for('index') }}"
+               style="padding: 12px 24px; background: #6c757d; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
 {% endblock %}

@@ -1,139 +1,107 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Filter and Sort Bar -->
-<div style="margin: 20px 0; display: flex; gap: 10px; flex-wrap: wrap;">
-    <form method="GET" action="{{ url_for('index') }}" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-        <input
-            type="text"
-            name="search"
-            placeholder="Search by subject"
-            value="{{ request.args.get('search', '') }}"
-            style="padding: 6px 10px; min-width: 180px;"
-        >
+<div style="max-width: 1400px; margin: 40px auto; padding: 0 20px;">
 
-<select name="urgency" style="padding: 6px 10px;">
-    <option value="" {% if not request.args.get('urgency') %} selected {% endif %}>All Status</option>
-    <option value="urgent" {% if request.args.get('urgency') == 'urgent' %} selected {% endif %}>Urgent</option>
-    <option value="non-urgent" {% if request.args.get('urgency') == 'non-urgent' %} selected {% endif %}>Non-urgent</option>
-</select>
+    <h1 style="text-align:center; font-size: 32px; font-weight: bold; color: #222; margin-bottom: 30px;">
+        Welcome to the Student Support App
+    </h1>
 
-<select name="sort" style="padding: 6px 10px;">
-    <option value="" {% if not request.args.get('sort') %} selected {% endif %}>Newest first</option>
-    <option value="priority_desc" {% if request.args.get('sort') == 'priority_desc' %} selected {% endif %}>Priority: High to Low</option>
-    <option value="priority_asc" {% if request.args.get('sort') == 'priority_asc' %} selected {% endif %}>Priority: Low to High</option>
-</select>
+    <div style="display: grid; gap: 24px;
+                {% if current_user.role == 'student' %}
+                    grid-template-columns: repeat(3, 1fr);
+                {% else %}
+                    grid-template-columns: repeat(2, 1fr); max-width: 900px; margin: 0 auto;
+                {% endif %}
+               ">
 
-        <button type="submit" style="padding: 6px 14px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">Filter</button>
+        <!-- 1. Messages  -->
+        <div style="background: #ffffff; border-radius: 14px; padding: 26px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
 
-        <a href="{{ url_for('index') }}" style="padding: 6px 14px; text-decoration: none; background: #6c757d; color: white; border-radius: 4px; font-size: 14px;">Reset</a>
-    </form>
-</div>
+            <h2 style="margin:0 0 8px 0; font-size: 22px; font-weight: bold; color: #007bff; display: flex; align-items: center; gap: 10px;">
+                📩 Messages
+            </h2>
+            <p style="margin:0 0 20px 0; color:#666;">View & manage support messages</p>
+            <hr style="border:none; border-top:1px solid #eee; margin: 0 0 30px 0;">
 
-    <!-- Flash Messages (Success/Error Notifications) -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div style="
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 4px;
-            color: white;
-            background-color: {{ 'green' if category == 'success' else 'red' }};
-          ">
-            {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <a href="{{ url_for('messages_page') }}"
+                   style="padding:16px; text-align:center; background:#e6f0ff; color:#007bff; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    View Messages
+                </a>
 
-    <h1>Welcome to the Student Support App</h1>
-
-{% if current_user.role == 'teacher' %}
-<div style="margin-bottom:20px;">
-    <a href="{{ url_for('new_message') }}" style="padding:10px 20px; background:#28a745; color:white; border-radius:6px; text-decoration:none;">
-        + New Message
-    </a>
-</div>
-{% else %}
-<div style="padding:15px; background:#f8f9fa; border-radius:4px; margin-bottom:30px;">
-</div>
-{% endif %}
-
-    <!-- List of Submitted Support Messages -->
-    <h2>All Support Messages</h2>
-    {% if student_infos %}
-        <ul style="list-style: none; padding: 0; max-width: 800px;">
-            {% for msg in student_infos %}
-            <li style="padding: 10px; border-bottom: 1px solid #eee; margin: 5px 0;">
-                <strong>Subject:</strong>
-                <a href="{{ url_for('message_detail', msg_id=msg.id) }}">
-                    {{ msg.subject }}
-                </a> |
-                <strong>Urgency:</strong> {{ msg.urgency }} |
-                <strong>Teacher:</strong> {{ msg.teacher_name }} ({{ msg.teacher_email }}) |
-                <strong>Published:</strong> {{ msg.publish_date.strftime('%Y-%m-%d') }}<br>
-
+                {% if current_user.role == 'student' %}
+                <a href="{{ url_for('ai_assistant_page') }}"
+                   style="padding:16px; text-align:center; background:#f8fcff; color:#17a2b8; border:1px solid #17a2b8; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    AI Assistant
+                </a>
+                {% endif %}
 
                 {% if current_user.role == 'teacher' %}
-                <div style="margin-top:6px;">
-                    <a href="{{ url_for('message_edit', msg_id=msg.id) }}" style="color:blue;">Edit</a>
-                    &nbsp;|&nbsp;
-                    <a href="{{ url_for('message_delete', msg_id=msg.id) }}"
-                       style="color:red;"
-                       onclick="return confirm('Delete this message?');">
-                        Delete
-                    </a>
-                </div>
+                <a href="{{ url_for('new_message') }}"
+                   style="padding:16px; text-align:center; background:#f8fcff; color:#007bff; border:1px solid #007bff; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    + New Message
+                </a>
                 {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>No support messages added yet.</p>
-    {% endif %}
-
-{% if current_user.role == 'student' %}
-<div style="margin: 30px 0; padding: 20px; background:#f8fcff; border-radius:12px; border:1px solid #e0f0ff; box-shadow: 0 4px 6px rgba(0,123,255,0.05);">
-    <div style="display:flex; align-items:center; gap:14px; margin-bottom: 15px;">
-        <div style="font-size:28px;">🤖</div>
-        <div>
-            <h3 style="margin:0; color:#007bff; font-weight: 600;">AI Smart Assistant</h3>
-            <p style="margin:4px 0; color:#666; font-size:14px;">Powered by Local TinyLlama</p>
-        </div>
-    </div>
-
-    <form method="POST" style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button type="submit" name="ai_action" value="summarize"
-                style="padding:10px 18px; background:#007bff; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition: 0.2s;">
-            🔍 Analyze All
-        </button>
-
-        <button type="submit" name="ai_action" value="deadlines"
-                style="padding:10px 18px; background:white; color:#17a2b8; border:1px solid #17a2b8; border-radius:8px; cursor:pointer; font-weight:500; transition: 0.2s;">
-            ⏰ Exam & Deadlines
-        </button>
-
-        <button type="submit" name="ai_action" value="motivation"
-                style="padding:10px 18px; background:white; color:#6f42c1; border:1px solid #6f42c1; border-radius:8px; cursor:pointer; font-weight:500; transition: 0.2s;">
-            🔥 Boost My Spirit
-        </button>
-    </form>
-
-    {% if ai_summary %}
-    <div style="margin-top:20px; padding:18px; background:white; border-radius:10px; border:1px solid #eef2f5; line-height:1.8; color: #333; position: relative;">
-        <div style="position:absolute; top:-10px; left:15px; background:#f8fcff; padding:0 10px; font-size:12px; color:#007bff; border:1px solid #e0f0ff; border-radius:10px;">
-            AI Response
+            </div>
         </div>
 
-        <div style="white-space: pre-line;">{{ ai_summary }}</div>
+        <!-- 2. Survey  -->
+        {% if current_user.role == 'student' %}
+        <div style="background: #ffffff; border-radius: 14px; padding: 26px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+
+            <h2 style="margin:0 0 8px 0; font-size: 22px; font-weight: bold; color:#6f42c1; display: flex; align-items: center; gap: 10px;">
+                📝 Survey
+            </h2>
+            <p style="margin:0 0 20px 0; color:#666;">Complete satisfaction survey</p>
+            <hr style="border:none; border-top:1px solid #eee; margin:0 0 30px 0;">
+
+            <div style="text-align:center;">
+                <a href="{{ url_for('survey') }}"
+                   style="display:inline-block; padding:18px 32px; background:#f3e9ff; color:#6f42c1; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    Start Survey
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 3. Appointment  -->
+        <div style="background: #ffffff; border-radius: 14px; padding: 26px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+
+            <h2 style="margin:0 0 8px 0; font-size: 22px; font-weight: bold; color:#28a745; display: flex; align-items: center; gap: 10px;">
+                🗓️ Appointment
+            </h2>
+            <p style="margin:0 0 20px 0; color:#666;">Book & manage your appointments</p>
+            <hr style="border:none; border-top:1px solid #eee; margin: 0 0 30px 0;">
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                {% if current_user.role == 'student' %}
+                <a href="{{ url_for('appointment') }}"
+                   style="padding:16px; text-align:center; background:#e6f4ea; color:#28a745; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    Go To Appointment
+                </a>
+                <a href="{{ url_for('my_appointments') }}"
+                   style="padding:16px; text-align:center; background:#ffffff; color:#28a745; border:1px solid #28a745; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    My Appointments
+                </a>
+                {% endif %}
+
+                {% if current_user.role == 'teacher' %}
+                <a href="{{ url_for('my_appointments') }}"
+                   style="padding:16px; text-align:center; background:#e6f4ea; color:#28a745; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    View All Appointments
+                </a>
+                <a href="{{ url_for('manage_time_slots') }}"
+                   style="padding:16px; text-align:center; background:#ffffff; color:#28a745; border:1px solid #28a745; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    Manage Time Slots
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
-    {% endif %}
 </div>
-{% endif %}
-
-    <!-- Navigation Links -->
-    <div style="margin-top: 20px;">
-        <a href="{{ url_for('survey') }}">Survey</a>
-    </div>
 {% endblock %}

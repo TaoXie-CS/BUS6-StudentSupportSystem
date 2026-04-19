@@ -3,39 +3,91 @@
 <head>
     <meta charset="UTF-8">
     {% if title %}
-        <title>{{ title }} - Database Example</title>
+        <title>{{ title }} - Student Support App</title>
     {% else %}
-        <title>Welcome to an introduction to databases</title>
+        <title>Welcome to the Student Support App</title>
     {% endif %}
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f7f8fa;
+        }
+        .top-nav {
+            padding: 16px 30px;
+            background: #ffffff;
+            border-bottom: 1px solid #eef0f2;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        }
+        .nav-btn {
+            padding: 10px 18px;
+            background: #007bff;
+            color: white !important;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .welcome-text {
+            font-weight: bold;
+            font-size: 15px;
+            color: #222;
+        }
+        .flash-message {
+            max-width: 1200px;
+            margin: 15px auto;
+            padding: 14px 20px;
+            background: #ffffff;
+            border-left: 4px solid #007bff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            font-weight: 500;
+        }
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div style="padding: 10px; background: #f5f5f5; margin-bottom: 20px;">
-        {% if current_user.is_authenticated %}
-            <span>Welcome, {{ current_user.username }}!</span> |
-            {% if current_user.role == "student" %}
-                <a href="{{ url_for('appointment') }}">预约服务</a> |
-            {% endif %}
-            {% if current_user.role == "teacher" %}
-                <a href="{{ url_for('manage_time_slots') }}">管理预约时间</a> |
-            {% endif %}
-            <a href="{{ url_for('my_appointments') }}">我的预约</a> |
-            <a href="{{ url_for('logout') }}">Logout</a>
-        {% else %}
-            <a href="{{ url_for('login') }}">Login</a> |
-            <a href="{{ url_for('register') }}">Register</a>
-        {% endif %}
-    </div>
-    <hr>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-    {% endwith %}
-    <main>{% block content %}    {% endblock %}</main>
+
+<div class="top-nav">
+    {% if current_user.is_authenticated %}
+        <span class="welcome-text">Welcome, {{ current_user.username }}!</span>
+        <a href="{{ url_for('logout') }}" class="nav-btn">Logout</a>
+    {% else %}
+        <a href="{{ url_for('login') }}" class="nav-btn">Login</a>
+        <a href="{{ url_for('register') }}" class="nav-btn">Register</a>
+    {% endif %}
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for msg in messages %}
+            <div class="flash-message">{{ msg }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<main>
+    {% block content %}{% endblock %}
+</main>
 
 </body>
 </html>

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; padding: 30px;
+            background: #ffffff; border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+
+    <h2 style="font-size: 26px; font-weight: bold; color: #222; margin-bottom: 25px;">🤖 AI Assistant</h2>
+
+    <div style="padding:18px; background:#f8fcff; border-radius:8px; border:1px solid #e0f0ff; margin-bottom:20px;">
+        <p style="margin:0 0 15px 0; color:#666;">Select an action to analyze your messages:</p>
+        <form method="POST" style="display:flex; flex-direction:column; gap:10px;">
+            <button type="submit" name="ai_action" value="summarize" style="padding:12px; background:#007bff; color:white; border:none; border-radius:6px; font-weight:bold;">
+                🔍 Analyze All Messages
+            </button>
+            <button type="submit" name="ai_action" value="deadlines" style="padding:12px; background:white; color:#17a2b8; border:1px solid #17a2b8; border-radius:6px; font-weight:bold;">
+                ⏰ Exam & Deadlines
+            </button>
+            <button type="submit" name="ai_action" value="motivation" style="padding:12px; background:white; color:#6f42c1; border:1px solid #6f42c1; border-radius:6px; font-weight:bold;">
+                🔥 Boost My Spirit
+            </button>
+        </form>
+    </div>
+
+    {% if ai_summary %}
+    <div style="padding:18px; background:#fafafa; border-radius:8px; border:1px solid #eee;">
+        <h4 style="margin:0 0 10px 0; font-weight:bold; color:#222;">AI Response:</h4>
+        <p style="margin:0; line-height:1.6; color:#333;">{{ ai_summary }}</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:25px;">
+        <a href="{{ url_for('index') }}" style="padding:10px 20px; background:#6c757d; color:white; border-radius:6px; text-decoration:none; font-weight:bold;">
+            ← Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}

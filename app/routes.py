@@ -1001,3 +1001,64 @@ def delete_file_msg(file_id):
     flash("File deleted successfully", "success")
 
     return redirect(url_for('message_edit', msg_id=f.message_id))
+
+
+
+@app.route('/messages', methods=['GET'])
+@login_required
+def messages_page():
+    search = request.args.get('search', '')
+    filter_urgency = request.args.get('urgency', '')
+    sort = request.args.get('sort', '')
+
+    query = SupportMessage.query
+    if current_user.role == "teacher":
+        query = query.filter_by(user_id=current_user.id)
+
+    if search:
+        query = query.filter(SupportMessage.subject.ilike(f"%{search}%"))
+    if filter_urgency:
+        query = query.filter(SupportMessage.urgency == filter_urgency)
+
+    if sort == "priority_desc":
+        query = query.order_by(SupportMessage.urgency.desc())
+    elif sort == "priority_asc":
+        query = query.order_by(SupportMessage.urgency.asc())
+    else:
+        query = query.order_by(SupportMessage.publish_date.desc())
+
+    support_messages = query.all()
+
+    return render_template(
+        'messages.html',
+        student_infos=support_messages,
+        search=search,
+        urgency=filter_urgency,
+        sort=sort
+    )
+
+
+@app.route('/ai-assistant', methods=['GET', 'POST'])
+@login_required
+def ai_assistant_page():
+    if current_user.role != "student":
+        flash("Only students can use AI Assistant", "danger")
+        return redirect(url_for('index'))
+
+    query = SupportMessage.query
+    support_messages = query.all()
+
+    ai_summary = ""
+    if request.method == "POST":
+        action = request.form.get("ai_action")
+        context = ""
+        for msg in support_messages:
+            content_snippet = msg.message_content[:150] if msg.message_content else ""
+            context += f"Subject: {msg.subject} | Info: {content_snippet}\n"
+
+        if context:
+            ai_summary = generate_message_summary(context, mode=action)
+        else:
+            ai_summary = "No messages available to analyze."
+
+    return render_template('ai_assistant.html', ai_summary=ai_summary)

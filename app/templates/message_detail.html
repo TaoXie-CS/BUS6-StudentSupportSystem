@@ -1,26 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>{{ message.subject }}</h2>
-<p><strong>Urgency:</strong> {{ message.urgency }}</p>
-<p><strong>Teacher:</strong> {{ message.teacher_name }} | {{ message.teacher_email }}</p>
-<p><strong>Published:</strong> {{ message.publish_date.strftime('%Y-%m-%d') }}</p>
-<hr>
-<div style="white-space: pre-wrap; padding: 10px 0;">
-    {{ message.message_content }}
-</div>
-<br>
+<div style="max-width: 800px; margin: 40px auto; padding: 30px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
 
-<!-- files zone -->
-<h2>Attachments</h2>
-{% for file in message.files %}
-    <div>
-        <!-- download file -->
-        <a href="{{ url_for('download_file', file_id=file.id) }}">
-            {{ file.filename }}
-        </a>
+    <h1 style="font-size: 28px; font-weight: bold; color: #222; margin-bottom: 20px;">
+        {{ message.subject }}
+    </h1>
+
+    <div style="margin-bottom: 25px; line-height: 1.8;">
+        <p style="margin: 0; font-size: 16px;"><strong>Urgency:</strong> {{ message.urgency }}</p>
+        <p style="margin: 0; font-size: 16px;"><strong>Teacher:</strong> {{ message.teacher_name }} | {{ message.teacher_email }}</p>
+        <p style="margin: 0; font-size: 16px;"><strong>Published:</strong> {{ message.publish_date.strftime('%Y-%m-%d') }}</p>
     </div>
-{% endfor %}
 
-<a href="{{ url_for('index') }}">Back to list</a>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+
+    <div style="background: #fafafa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+        <div style="white-space: pre-wrap; line-height: 1.7; font-size: 16px; color: #333;">
+            {{ message.message_content }}
+        </div>
+    </div>
+
+    <h3 style="font-size: 20px; font-weight: bold; margin-bottom: 15px;">Attachments</h3>
+    {% if message.files %}
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
+            {% for file in message.files %}
+            <a href="{{ url_for('download_file', file_id=file.id) }}"
+               style="display: inline-block; padding: 10px 16px; background: #e6f4ea; color: #28a745; text-decoration: none; border-radius: 6px; font-weight: 500; width: fit-content;">
+                📎 {{ file.filename }}
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: #666; margin-bottom: 30px;">No attachments</p>
+    {% endif %}
+
+    <a href="{{ url_for('index') }}"
+       style="display: inline-block; padding: 10px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">
+        ← Back to list
+    </a>
+
+</div>
 {% endblock %}
