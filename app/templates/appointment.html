@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h1>预约服务</h1>
+
+    <!-- 步骤1：选择预约类型 -->
+    <div id="step1" class="step-section">
+        <h2>步骤1：选择预约类型</h2>
+        <div class="appointment-types" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0;">
+            <div class="type-card" data-type="lecturer" style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; cursor: pointer; text-align: center;">
+                <h3>📚 学生辅导课程预约</h3>
+                <p>向讲师预约辅导课程</p>
+            </div>
+            <div class="type-card" data-type="wellbeing_adviser" style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; cursor: pointer; text-align: center;">
+                <h3>💚 学生心理咨询预约</h3>
+                <p>向心理咨询师预约咨询服务</p>
+            </div>
+            <div class="type-card" data-type="careers_adviser" style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; cursor: pointer; text-align: center;">
+                <h3>💼 就业指导服务预约</h3>
+                <p>向就业指导老师预约指导服务</p>
+            </div>
+            <div class="type-card" data-type="academic_consultation" style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; cursor: pointer; text-align: center;">
+                <h3>🎓 学生学业问题咨询预约</h3>
+                <p>预约学业问题咨询服务</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 步骤2：选择老师 -->
+    <div id="step2" class="step-section" style="display: none;">
+        <h2>步骤2：选择老师</h2>
+        <div style="margin: 20px 0;">
+            <label for="teacher-select" style="display: block; margin-bottom: 10px; font-weight: bold;">选择老师：</label>
+            <select id="teacher-select" style="width: 100%; padding: 10px; font-size: 16px;">
+                <option value="">请选择老师</option>
+            </select>
+        </div>
+        <button onclick="backToStep1()" style="padding: 10px 20px; margin-right: 10px;">上一步</button>
+    </div>
+
+    <!-- 步骤3：选择日期 -->
+    <div id="step3" class="step-section" style="display: none;">
+        <h2>步骤3：选择日期</h2>
+        <div style="margin: 20px 0;">
+            <label for="date-picker" style="display: block; margin-bottom: 10px; font-weight: bold;">选择日期：</label>
+            <input type="date" id="date-picker" style="width: 100%; padding: 10px; font-size: 16px;" min="">
+            <p id="date-loading" style="color: #666; display: none;">正在加载可用日期...</p>
+            <p id="no-dates-msg" style="color: #f44336; display: none;">该老师暂无可预约日期</p>
+        </div>
+        <button onclick="backToStep2()" style="padding: 10px 20px; margin-right: 10px;">上一步</button>
+    </div>
+
+    <!-- 步骤4：选择时间段 -->
+    <div id="step4" class="step-section" style="display: none;">
+        <h2>步骤4：选择时间段</h2>
+        <div id="time-slots-container" style="margin: 20px 0;">
+            <p id="slots-loading" style="color: #666;">正在加载时间段...</p>
+            <div id="time-slots" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;"></div>
+        </div>
+        <button onclick="backToStep3()" style="padding: 10px 20px; margin-right: 10px;">上一步</button>
+    </div>
+
+    <!-- 步骤5：填写描述并提交 -->
+    <div id="step5" class="step-section" style="display: none;">
+        <h2>步骤5：填写预约信息</h2>
+        <div style="margin: 20px 0;">
+            <label for="description" style="display: block; margin-bottom: 10px; font-weight: bold;">问题描述 / 需求说明（选填）：</label>
+            <textarea id="description" rows="5" style="width: 100%; padding: 10px; font-size: 16px; resize: vertical;" placeholder="请描述您的问题或需求，以便老师更好地为您服务..."></textarea>
+            <p style="color: #666; font-size: 14px; margin-top: 5px;">最多500字符</p>
+        </div>
+
+        <div id="appointment-summary" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h3>预约信息确认</h3>
+            <p><strong>预约类型：</strong><span id="summary-type"></span></p>
+            <p><strong>老师：</strong><span id="summary-teacher"></span></p>
+            <p><strong>日期：</strong><span id="summary-date"></span></p>
+            <p><strong>时间段：</strong><span id="summary-time"></span></p>
+        </div>
+
+        <button onclick="backToStep4()" style="padding: 10px 20px; margin-right: 10px;">上一步</button>
+        <button onclick="submitAppointment()" style="padding: 10px 30px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 16px;">提交预约</button>
+    </div>
+
+    <!-- 成功提示 -->
+    <div id="success-message" style="display: none; text-align: center; padding: 40px;">
+        <h2 style="color: #4CAF50;">✓ 预约申请已提交</h2>
+        <p>您的预约申请已提交，等待老师确认。</p>
+        <p>您可以在"我的预约"页面查看预约状态。</p>
+        <a href="{{ url_for('my_appointments') }}" style="display: inline-block; margin-top: 20px; padding: 10px 30px; background: #2196F3; color: white; text-decoration: none; border-radius: 4px;">查看我的预约</a>
+    </div>
+</div>
+
+<style>
+.type-card:hover {
+    border-color: #2196F3 !important;
+    background: #f0f8ff;
+}
+.type-card.selected {
+    border-color: #4CAF50 !important;
+    background: #f0fff0;
+}
+.time-slot-btn {
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    background: white;
+    transition: all 0.3s;
+}
+.time-slot-btn:hover:not(.booked) {
+    border-color: #2196F3;
+    background: #f0f8ff;
+}
+.time-slot-btn.selected {
+    border-color: #4CAF50;
+    background: #f0fff0;
+}
+.time-slot-btn.booked {
+    background: #ffebee;
+    border-color: #f44336;
+    color: #999;
+    cursor: not-allowed;
+}
+.step-section {
+    animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+// 预约数据
+let appointmentData = {
+    type: '',
+    typeName: '',
+    teacherId: '',
+    teacherName: '',
+    date: '',
+    timeSlotId: '',
+    timeSlot: '',
+    description: ''
+};
+
+// 类型名称映射
+const typeNames = {
+    'lecturer': '学生辅导课程预约',
+    'wellbeing_adviser': '学生心理咨询预约',
+    'careers_adviser': '就业指导服务预约',
+    'academic_consultation': '学生学业问题咨询预约'
+};
+
+// 添加：查询类型映射（用于API查询）
+const queryTypeMap = {
+    'lecturer': 'lecturer',
+    'wellbeing_adviser': 'wellbeing_adviser',
+    'careers_adviser': 'careers_adviser',
+    'academic_consultation': 'wellbeing_adviser'  // 学业咨询查询 wellbeing_adviser 类型老师
+};
+
+// 步骤1：选择预约类型
+document.querySelectorAll('.type-card').forEach(card => {
+    card.addEventListener('click', async () => {
+        // 移除其他选中状态
+        document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        appointmentData.type = card.dataset.type;
+        appointmentData.typeName = typeNames[appointmentData.type];
+
+        // 获取查询用的 teacher_type（学业咨询使用 wellbeing_adviser）
+        const queryType = queryTypeMap[appointmentData.type];
+
+        // 加载老师列表
+        await loadTeachers(queryType);
+
+        // 显示步骤2
+        showStep(2);
+    });
+});
+
+// 加载老师列表
+async function loadTeachers(teacherType) {
+    const select = document.getElementById('teacher-select');
+    select.innerHTML = '<option value="">加载中...</option>';
+
+    try {
+        const response = await fetch(`/api/teachers/${teacherType}`);
+        const teachers = await response.json();
+
+        select.innerHTML = '<option value="">请选择老师</option>';
+        teachers.forEach(teacher => {
+            const option = document.createElement('option');
+            option.value = teacher.id;
+            option.textContent = `${teacher.username} (${teacher.email})`;
+            select.appendChild(option);
+        });
+
+        // 绑定选择事件
+        select.onchange = async () => {
+            if (select.value) {
+                appointmentData.teacherId = select.value;
+                appointmentData.teacherName = select.options[select.selectedIndex].text;
+                await loadAvailableDates(appointmentData.teacherId);
+                showStep(3);
+            }
+        };
+    } catch (error) {
+        console.error('加载老师列表失败:', error);
+        select.innerHTML = '<option value="">加载失败，请刷新重试</option>';
+    }
+}
+
+// 加载可用日期
+async function loadAvailableDates(teacherId) {
+    const datePicker = document.getElementById('date-picker');
+    const loadingMsg = document.getElementById('date-loading');
+    const noDatesMsg = document.getElementById('no-dates-msg');
+
+    loadingMsg.style.display = 'block';
+    noDatesMsg.style.display = 'none';
+
+    try {
+        const response = await fetch(`/api/available_dates/${teacherId}`);
+        const dates = await response.json();
+
+        loadingMsg.style.display = 'none';
+
+        if (dates.length === 0) {
+            noDatesMsg.style.display = 'block';
+            datePicker.disabled = true;
+        } else {
+            datePicker.disabled = false;
+            // 设置最小日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            datePicker.min = today;
+
+            // 监听日期选择
+            datePicker.onchange = async () => {
+                if (datePicker.value) {
+                    appointmentData.date = datePicker.value;
+                    await loadTimeSlots(appointmentData.teacherId, appointmentData.date);
+                    showStep(4);
+                }
+            };
+        }
+    } catch (error) {
+        console.error('加载可用日期失败:', error);
+        loadingMsg.style.display = 'none';
+        noDatesMsg.style.display = 'block';
+        noDatesMsg.textContent = '加载失败，请重试';
+    }
+}
+
+// 加载时间段
+async function loadTimeSlots(teacherId, date) {
+    const container = document.getElementById('time-slots');
+    const loadingMsg = document.getElementById('slots-loading');
+
+    loadingMsg.style.display = 'block';
+    container.innerHTML = '';
+
+    try {
+        const response = await fetch(`/api/time_slots/${teacherId}/${date}`);
+        const slots = await response.json();
+
+        loadingMsg.style.display = 'none';
+
+        if (slots.length === 0) {
+            container.innerHTML = '<p style="color: #666;">该日期暂无可用时间段</p>';
+        } else {
+            slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.className = 'time-slot-btn';
+                btn.textContent = slot.time;
+                btn.dataset.id = slot.id;
+
+                if (slot.is_booked) {
+                    btn.classList.add('booked');
+                    btn.disabled = true;
+                    btn.textContent += ' (已约满)';
+                } else {
+                    btn.onclick = () => selectTimeSlot(btn, slot);
+                }
+
+                container.appendChild(btn);
+            });
+        }
+    } catch (error) {
+        console.error('加载时间段失败:', error);
+        container.innerHTML = '<p style="color: #f44336;">加载失败，请重试</p>';
+    }
+}
+
+// 选择时间段
+function selectTimeSlot(btn, slot) {
+    // 移除其他选中状态
+    document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    appointmentData.timeSlotId = slot.id;
+    appointmentData.timeSlot = slot.time;
+
+    // 更新确认信息
+    document.getElementById('summary-type').textContent = appointmentData.typeName;
+    document.getElementById('summary-teacher').textContent = appointmentData.teacherName;
+    document.getElementById('summary-date').textContent = appointmentData.date;
+    document.getElementById('summary-time').textContent = appointmentData.timeSlot;
+
+    showStep(5);
+}
+
+// 提交预约
+async function submitAppointment() {
+    appointmentData.description = document.getElementById('description').value;
+
+    try {
+        const response = await fetch('/appointment/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                time_slot_id: appointmentData.timeSlotId,
+                appointment_type: appointmentData.type,
+                description: appointmentData.description
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 显示成功消息
+            document.querySelectorAll('.step-section').forEach(s => s.style.display = 'none');
+            document.getElementById('success-message').style.display = 'block';
+        } else {
+            alert(result.message || '预约失败，请重试');
+        }
+    } catch (error) {
+        console.error('提交预约失败:', error);
+        alert('提交失败，请检查网络连接后重试');
+    }
+}
+
+// 显示指定步骤
+function showStep(stepNum) {
+    document.querySelectorAll('.step-section').forEach((section, index) => {
+        section.style.display = (index + 1 === stepNum) ? 'block' : 'none';
+    });
+}
+
+// 返回上一步函数
+function backToStep1() { showStep(1); }
+function backToStep2() { showStep(2); }
+function backToStep3() { showStep(3); }
+function backToStep4() { showStep(4); }
+</script>
+{% endblock %}

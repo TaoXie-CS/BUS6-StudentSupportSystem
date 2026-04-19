@@ -105,3 +105,48 @@ class SurveyTemplate(db.Model):
 
     def __repr__(self):
         return f"<SurveyTemplate {self.title}>"
+
+
+# ===================== Appointment System Models =====================
+class TimeSlot(db.Model):
+    """老师可预约时间段模型"""
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    teacher_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    date: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False)
+    time_slot: so.Mapped[str] = so.mapped_column(sa.String(20), nullable=False)
+    is_booked: so.Mapped[bool] = so.mapped_column(sa.Boolean, default=False, nullable=False)
+    created_at: so.Mapped[datetime] = so.mapped_column(
+        sa.DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    teacher: so.Mapped["User"] = so.relationship("User", foreign_keys=[teacher_id])
+    appointment: so.Mapped["Appointment"] = so.relationship(
+        back_populates="time_slot", uselist=False
+    )
+
+    def __repr__(self):
+        return f'<TimeSlot {self.date} {self.time_slot}>'
+
+
+class Appointment(db.Model):
+    """预约记录模型"""
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    student_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    teacher_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    time_slot_id: so.Mapped[int] = so.mapped_column(
+        sa.ForeignKey("time_slot.id"), nullable=False, unique=True
+    )
+    appointment_type: so.Mapped[str] = so.mapped_column(sa.String(50), nullable=False)
+    description: so.Mapped[str] = so.mapped_column(sa.Text, nullable=True)
+    status: so.Mapped[str] = so.mapped_column(sa.String(20), default="pending", nullable=False)
+    created_at: so.Mapped[datetime] = so.mapped_column(
+        sa.DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+    student: so.Mapped["User"] = so.relationship("User", foreign_keys=[student_id])
+    teacher: so.Mapped["User"] = so.relationship("User", foreign_keys=[teacher_id])
+    time_slot: so.Mapped["TimeSlot"] = so.relationship(back_populates="appointment")
+
+    def __repr__(self):
+        return f'<Appointment {self.id} - {self.status}>'
+# ===================== End of Appointment System =====================

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+    <h1>我的预约</h1>
+
+    {% if appointments %}
+        <div style="margin-top: 30px;">
+            {% for appointment in appointments %}
+            <div class="appointment-card" style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: white;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+                    <div style="flex: 1;">
+                        <!-- 预约类型 -->
+                        <div style="margin-bottom: 10px;">
+                            <span style="font-size: 12px; color: #666;">预约类型</span>
+                            <div style="font-size: 18px; font-weight: bold;">
+                                {% if appointment.appointment_type == 'lecturer' %}
+                                    📚 学生辅导课程预约
+                                {% elif appointment.appointment_type == 'wellbeing_adviser' %}
+                                    💚 学生心理咨询预约
+                                {% elif appointment.appointment_type == 'careers_adviser' %}
+                                    💼 就业指导服务预约
+                                {% elif appointment.appointment_type == 'academic_consultation' %}
+                                    🎓 学生学业问题咨询预约
+                                {% else %}
+                                    {{ appointment.appointment_type }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 预约信息 -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                            {% if current_user.role == "student" %}
+                            <div>
+                                <span style="font-size: 12px; color: #666;">老师</span>
+                                <div>{{ appointment.teacher.username }}</div>
+                                <div style="font-size: 14px; color: #666;">{{ appointment.teacher.email }}</div>
+                            </div>
+                            {% else %}
+                            <div>
+                                <span style="font-size: 12px; color: #666;">学生</span>
+                                <div>{{ appointment.student.username }}</div>
+                                <div style="font-size: 14px; color: #666;">{{ appointment.student.email }}</div>
+                            </div>
+                            {% endif %}
+
+                            <div>
+                                <span style="font-size: 12px; color: #666;">预约日期</span>
+                                <div>{{ appointment.time_slot.date.strftime('%Y年%m月%d日') }}</div>
+                            </div>
+
+                            <div>
+                                <span style="font-size: 12px; color: #666;">时间段</span>
+                                <div>{{ appointment.time_slot.time_slot }}</div>
+                            </div>
+
+                            <div>
+                                <span style="font-size: 12px; color: #666;">提交时间</span>
+                                <div>{{ appointment.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            </div>
+                        </div>
+
+                        <!-- 问题描述 -->
+                        {% if appointment.description %}
+                        <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                            <span style="font-size: 12px; color: #666;">问题描述</span>
+                            <div style="margin-top: 5px;">{{ appointment.description }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 状态标签 -->
+                    <div style="margin-left: 20px;">
+                        {% if appointment.status == 'pending' %}
+                            <span class="status-badge status-pending" style="background: #FFC107; color: #000; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;">⏳ 待确认</span>
+                        {% elif appointment.status == 'confirmed' %}
+                            <span class="status-badge status-confirmed" style="background: #4CAF50; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;">✓ 已确认</span>
+                        {% elif appointment.status == 'rejected' %}
+                            <span class="status-badge status-rejected" style="background: #f44336; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;">✗ 已拒绝</span>
+                        {% elif appointment.status == 'completed' %}
+                            <span class="status-badge status-completed" style="background: #2196F3; color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;">✓ 已完成</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 老师操作按钮 -->
+                {% if current_user.role == "teacher" and appointment.status == 'pending' %}
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <form method="POST" action="{{ url_for('handle_appointment', appointment_id=appointment.id, action='confirm') }}" style="display: inline;">
+                        <button type="submit" style="padding: 10px 25px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+                            ✓ 确认预约
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('handle_appointment', appointment_id=appointment.id, action='reject') }}" style="display: inline;">
+                        <button type="submit" style="padding: 10px 25px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            ✗ 拒绝预约
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 64px; margin-bottom: 20px;">📅</div>
+            <h2>暂无预约记录</h2>
+            <p>
+                {% if current_user.role == "student" %}
+                    您还没有任何预约，快去预约服务吧！
+                {% else %}
+                    暂未有学生向您发起预约。
+                {% endif %}
+            </p>
+            {% if current_user.role == "student" %}
+            <a href="{{ url_for('appointment') }}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #2196F3; color: white; text-decoration: none; border-radius: 4px;">
+                去预约
+            </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.appointment-card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s;
+}
+.appointment-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.status-badge {
+    display: inline-block;
+    white-space: nowrap;
+}
+</style>
+{% endblock %}
