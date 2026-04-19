@@ -9,8 +9,8 @@ from app import db
 from app.models import SupportMessage, NewSurveyResponse
 from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
     ManagementSurveyForm, TeachingSurveyForm
-from app.models import SupportMessage, SurveyResponse, SurveyTemplate, TimeSlot, Appointment
-from app.forms import SupportMessageForm, TeacherUpload, SurveyForm, SurveyTemplateForm, AppointmentForm, TimeSlotForm
+from app.models import SupportMessage, TimeSlot, Appointment
+from app.forms import SupportMessageForm, TeacherUpload, SurveyTemplateForm, AppointmentForm, TimeSlotForm
 from sqlalchemy import func, cast, Float
 from sqlalchemy.exc import SQLAlchemyError
 from flask_login import login_user, current_user, logout_user, login_required
