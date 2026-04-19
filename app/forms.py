@@ -35,6 +35,8 @@ class SupportMessageForm(FlaskForm):
         ],
         validators=[DataRequired(message="Please select urgency level")]
     )
+    #files upload
+    files = FileField("Attach files (multiple)", render_kw={"multiple": True})
 
     submit = SubmitField("Submit Message")
 

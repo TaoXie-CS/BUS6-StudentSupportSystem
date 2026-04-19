@@ -50,44 +50,14 @@
     <h1>Welcome to the Student Support App</h1>
 
 {% if current_user.role == 'teacher' %}
-    <!-- Support Message Submission Form -->
-    <form action='' method="post" novalidate style="max-width: 600px; margin-bottom: 30px;">
-        {{ form.hidden_tag() }}
-
-        <!-- Subject Field -->
-        <p style="margin: 10px 0;">
-            {{ form.subject.label }}<br>
-            {{ form.subject(size=64, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
-            {% for error in form.subject.errors %}
-                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        <!-- Message Content Field -->
-        <p style="margin: 10px 0;">
-            {{ form.message_content.label }}<br>
-            {{ form.message_content(rows=4, cols=60, style="width: 100%; padding: 8px; margin-top: 5px;") }}<br>
-            {% for error in form.message_content.errors %}
-                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        <!-- Urgency Field -->
-        <p style="margin: 10px 0;">
-            {{ form.urgency.label }}<br>
-            {{ form.urgency(style="padding: 8px; margin-top: 5px;") }}<br>
-            {% for error in form.urgency.errors %}
-                <span style="color: red; font-size: 14px;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-
-        <p style="margin: 20px 0;">
-            {{ form.submit(style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;") }}
-        </p>
-    </form>
+<div style="margin-bottom:20px;">
+    <a href="{{ url_for('new_message') }}" style="padding:10px 20px; background:#28a745; color:white; border-radius:6px; text-decoration:none;">
+        + New Message
+    </a>
+</div>
 {% else %}
-    <div style="padding: 15px; background: #f8f9fa; border-radius: 4px; margin-bottom: 30px;">
-    </div>
+<div style="padding:15px; background:#f8f9fa; border-radius:4px; margin-bottom:30px;">
+</div>
 {% endif %}
 
     <!-- List of Submitted Support Messages -->
@@ -96,7 +66,7 @@
         <ul style="list-style: none; padding: 0; max-width: 800px;">
             {% for msg in student_infos %}
             <li style="padding: 10px; border-bottom: 1px solid #eee; margin: 5px 0;">
-                <strong>Title:</strong>
+                <strong>Subject:</strong>
                 <a href="{{ url_for('message_detail', msg_id=msg.id) }}">
                     {{ msg.subject }}
                 </a> |
@@ -149,10 +119,6 @@
 
     <!-- Navigation Links -->
     <div style="margin-top: 20px;">
-        {% if current_user.role == 'teacher' %}
-           <a href="{{ url_for('file_upload') }}">File Upload</a> |
-        {% endif %}
-        <a href="{{ url_for('files') }}">Files</a>  |
         <a href="{{ url_for('survey') }}">Survey</a>
     </div>
 {% endblock %}

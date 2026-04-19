@@ -58,7 +58,8 @@ class SupportMessage(db.Model):
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
     # Author
     author: so.Mapped["User"] = so.relationship(back_populates="messages")
-
+    # linked files
+    files: so.Mapped[list["UploadFile"]] = so.relationship(back_populates="message", cascade="all, delete-orphan")
     # Read records for students
     read_records = db.relationship('MessageRead', backref='message', lazy=True, passive_deletes=True)
 
@@ -177,13 +178,16 @@ class UploadFile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)
     stored_name = db.Column(db.String(255), nullable=False)
-    subject = db.Column(db.String(100))
-    teacher_name = db.Column(db.String(100))
-    remark = db.Column(db.Text)
     upload_time = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # link with message
+    message_id = db.Column(db.Integer, db.ForeignKey("support_message.id", ondelete="CASCADE"))
+    message = db.relationship("SupportMessage", backref=db.backref("files", cascade="all, delete-orphan"))
+
+    # who upload file
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    uploader = db.relationship("User", backref="files")
+
+    message: so.Mapped["SupportMessage"] = so.relationship(back_populates="files")
 
     def __repr__(self):
         return f"<File {self.filename}>"

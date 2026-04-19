@@ -75,34 +75,6 @@ def logout():
 def index():
     form = SupportMessageForm()
 
-    # Teacher submits a new message
-    if form.validate_on_submit():
-        # Only teachers can create messages
-        if current_user.role != "teacher":
-            flash("Only teachers can post messages", "danger")
-            return redirect(url_for('index'))
-        try:
-            # Create message with auto-filled teacher info
-            support_msg = SupportMessage(
-                subject=form.subject.data.strip(),
-                message_content=form.message_content.data.strip(),
-                urgency=form.urgency.data,
-                teacher_email=current_user.email,
-                teacher_name=current_user.username,
-                teacher_school_id=current_user.school_id,
-                user_id=current_user.id,
-                publish_date=date.today()
-            )
-
-            db.session.add(support_msg)
-            db.session.commit()
-            flash(f"Message '{form.subject.data}' created successfully!", "success")
-            return redirect(url_for('index'))
-
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            flash(f"Error creating message: {str(e)}", "danger")
-
     # --------------------------
     # Filter & Sort logic
     # --------------------------
@@ -148,6 +120,58 @@ def index():
         student_infos=support_messages,
         ai_summary=ai_summary
     )
+
+# ------------------------------
+# New Message (Teacher Only)
+# ------------------------------
+@app.route('/new-message', methods=['GET', 'POST'])
+@login_required
+def new_message():
+    if current_user.role != "teacher":
+        flash("Only teachers can create messages", "danger")
+        return redirect(url_for('index'))
+
+    form = SupportMessageForm()
+    if form.validate_on_submit():
+        try:
+            support_msg = SupportMessage(
+                subject=form.subject.data.strip(),
+                message_content=form.message_content.data.strip(),
+                urgency=form.urgency.data,
+                teacher_email=current_user.email,
+                teacher_name=current_user.username,
+                teacher_school_id=current_user.school_id,
+                user_id=current_user.id,
+                publish_date=date.today()
+            )
+            db.session.add(support_msg)
+            db.session.flush()
+
+            files = request.files.getlist("files")
+            for file in files:
+                if file and allowed_file(file.filename):
+                    original_filename = secure_filename(file.filename)
+                    ext = original_filename.rsplit('.', 1)[1].lower()
+                    stored_filename = f"{uuid.uuid4()}.{ext}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], stored_filename))
+
+                    new_file = UploadFile(
+                        filename=original_filename,
+                        stored_name=stored_filename,
+                        message_id=support_msg.id,
+                        user_id=current_user.id
+                    )
+                    db.session.add(new_file)
+
+            db.session.commit()
+            flash(f"Message '{form.subject.data}' created successfully!", "success")
+            return redirect(url_for('index'))
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error creating message: {str(e)}", "danger")
+
+    return render_template("new_message.html", form=form)
 
 
 # List page: Display all messages in descending order of priority
@@ -363,26 +387,12 @@ def file_upload():
 def download_file(file_id):
     f = UploadFile.query.get_or_404(file_id)
     return send_from_directory(
-        UPLOAD_FOLDER, f.stored_name, as_attachment=True, download_name=f.filename
+        app.config['UPLOAD_FOLDER'],
+        f.stored_name,
+        as_attachment=True,
+        download_name=f.filename
     )
 
-# delete file
-@app.route('/delete/file/<int:file_id>')
-@login_required
-def delete_file(file_id):
-    f = UploadFile.query.get_or_404(file_id)
-    if f.user_id != current_user.id:
-        flash('You can only delete your own','danger')
-        return redirect(url_for('files'))
-
-    path = os.path.join(UPLOAD_FOLDER, f.stored_name)
-    if os.path.exists(path):
-        os.remove(path)
-
-    db.session.delete(f)
-    db.session.commit()
-    flash('File deleted','success')
-    return redirect(url_for('files'))
 
 
 # ====================== [Modified] New Survey System Routes ======================
@@ -877,21 +887,36 @@ def message_detail(msg_id):
 @app.route('/edit/<int:msg_id>', methods=['GET', 'POST'])
 @login_required
 def message_edit(msg_id):
-    """Edit own message (teacher only)"""
     msg = SupportMessage.query.get_or_404(msg_id)
-
     if msg.user_id != current_user.id:
-        flash("Permission denied", "danger")
+        flash("Permission denied")
         return redirect(url_for('index'))
 
     form = SupportMessageForm(obj=msg)
-
     if form.validate_on_submit():
+        # 1. update
         msg.subject = form.subject.data.strip()
         msg.message_content = form.message_content.data.strip()
         msg.urgency = form.urgency.data
+
+        # 2. update new files
+        files = request.files.getlist("files")
+        for file in files:
+            if file and allowed_file(file.filename):
+                orig = secure_filename(file.filename)
+                ext = orig.rsplit('.',1)[1].lower()
+                stored = f"{uuid.uuid4()}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], stored))
+                new_file = UploadFile(
+                    filename=orig,
+                    stored_name=stored,
+                    message_id=msg.id,
+                    user_id=current_user.id
+                )
+                db.session.add(new_file)
+
         db.session.commit()
-        flash("Message updated successfully", "success")
+        flash("Message updated successfully, new attachments added")
         return redirect(url_for('index'))
 
     return render_template("edit_message.html", form=form, message=msg)
@@ -903,12 +928,39 @@ def message_edit(msg_id):
 @app.route('/delete/<int:msg_id>')
 @login_required
 def message_delete(msg_id):
-    """Delete own message (teacher only)"""
     msg = SupportMessage.query.get_or_404(msg_id)
 
-    if msg.user_id == current_user.id:
-        db.session.delete(msg)
-        db.session.commit()
-        flash("Message deleted", "success")
+    if msg.user_id != current_user.id:
+        flash("No permission")
+        return redirect(url_for('index'))
 
+    # delete files
+    for f in msg.files:
+        path = os.path.join(UPLOAD_FOLDER, f.stored_name)
+        if os.path.exists(path):
+            os.remove(path)
+
+    # delete message and files
+    db.session.delete(msg)
+    db.session.commit()
+    flash("Message and all files deleted")
     return redirect(url_for('index'))
+
+# delete files
+@app.route('/delete/file/<int:file_id>')
+@login_required
+def delete_file_msg(file_id):
+    f = UploadFile.query.get_or_404(file_id)
+    if f.user_id != current_user.id:
+        flash("You can only delete your own files", "danger")
+        return redirect(url_for('index'))
+
+    path = os.path.join(app.config['UPLOAD_FOLDER'], f.stored_name)
+    if os.path.exists(path):
+        os.remove(path)
+
+    db.session.delete(f)
+    db.session.commit()
+    flash("File deleted successfully", "success")
+
+    return redirect(url_for('message_edit', msg_id=f.message_id))

@@ -10,5 +10,17 @@
     {{ message.message_content }}
 </div>
 <br>
+
+<!-- files zone -->
+<h2>Attachments</h2>
+{% for file in message.files %}
+    <div>
+        <!-- download file -->
+        <a href="{{ url_for('download_file', file_id=file.id) }}">
+            {{ file.filename }}
+        </a>
+    </div>
+{% endfor %}
+
 <a href="{{ url_for('index') }}">Back to list</a>
 {% endblock %}
