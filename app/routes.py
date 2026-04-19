@@ -628,7 +628,7 @@ def submit_appointment():
         time_slot_id=time_slot_id,
         appointment_type=appointment_type,
         description=description,
-        status='pending'
+        status='confirmed'
     )
 
     # 标记时间段为已预约
@@ -658,26 +658,57 @@ def my_appointments():
     return render_template('my_appointments.html', appointments=appointments)
 
 
-@app.route('/appointment/<int:appointment_id>/<action>', methods=['POST'])
+# @app.route('/appointment/<int:appointment_id>/<action>', methods=['POST'])
+# @login_required
+# def handle_appointment(appointment_id, action):
+#     """老师确认/拒绝预约"""
+#     appointment = Appointment.query.get_or_404(appointment_id)
+
+#     if current_user.id != appointment.teacher_id:
+#         flash("无权操作", "danger")
+#         return redirect(url_for('index'))
+
+#     if action == 'confirm':
+#         appointment.status = 'confirmed'
+#         flash("预约已确认", "success")
+#     elif action == 'reject':
+#         appointment.status = 'rejected'
+#         # 释放时间段
+#         appointment.time_slot.is_booked = False
+#         flash("预约已拒绝", "info")
+
+#     db.session.commit()
+#     return redirect(url_for('my_appointments'))
+
+
+@app.route('/appointment/<int:appointment_id>/cancel', methods=['POST'])
 @login_required
-def handle_appointment(appointment_id, action):
-    """老师确认/拒绝预约"""
+def cancel_appointment(appointment_id):
+    """学生撤销预约"""
     appointment = Appointment.query.get_or_404(appointment_id)
 
-    if current_user.id != appointment.teacher_id:
+    # 检查权限：只有预约的学生本人可以撤销
+    if current_user.id != appointment.student_id:
         flash("无权操作", "danger")
         return redirect(url_for('index'))
 
-    if action == 'confirm':
-        appointment.status = 'confirmed'
-        flash("预约已确认", "success")
-    elif action == 'reject':
-        appointment.status = 'rejected'
-        # 释放时间段
-        appointment.time_slot.is_booked = False
-        flash("预约已拒绝", "info")
+    # 检查状态：只能撤销待确认或已确认的预约
+    if appointment.status != 'confirmed':
+        flash("该预约无法撤销", "warning")
+        return redirect(url_for('my_appointments'))
 
+    # 释放时间段
+    appointment.time_slot.is_booked = False
+    
+    # 删除预约记录或更新状态为已取消
+    # 方案A：删除记录
+    db.session.delete(appointment)
+    
+    # 方案B：更新状态（如需保留记录）
+    # appointment.status = 'cancelled'
+    
     db.session.commit()
+    flash("预约已撤销", "success")
     return redirect(url_for('my_appointments'))
 
 
