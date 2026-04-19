@@ -6,6 +6,7 @@ SQLAlchemy==2.0.46
 WTForms==3.2.1
 Flask-Login==0.6.3
 email-validator==2.0.0
+flask-migrate==4.0.7
 
 # For Windows users:
 # If your virtual environment is not working please follow the instructions below:

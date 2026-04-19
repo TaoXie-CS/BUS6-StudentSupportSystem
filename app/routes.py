@@ -1,12 +1,12 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import render_template, redirect, url_for, flash, request, current_app, json, session
 from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, NewSurveyResponse
+from app.models import SupportMessage, NewSurveyResponse, MessageRead, UploadFile
 from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
     ManagementSurveyForm, TeachingSurveyForm
 from app.models import SupportMessage, TimeSlot, Appointment
@@ -18,6 +18,13 @@ from app.models import User
 from app.forms import RegistrationForm, LoginForm
 from app.ai import generate_message_summary
 from flask import jsonify
+import uuid
+from flask import send_from_directory
+
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED = {'pdf', 'docx', 'doc', 'png', 'jpg', 'zip', 'txt'}
 
 
 # Register
@@ -68,46 +75,44 @@ def logout():
 def index():
     form = SupportMessageForm()
 
-    if form.validate_on_submit():
-        # Only teachers could create message
-        if current_user.role != "teacher":
-            flash("Only teachers can post messages", "danger")
-            return redirect(url_for('index'))
-        try:
-            # Create a support message record
-            support_msg = SupportMessage(
-                user_id=current_user.id,
-                course_name=form.course_name.data.strip(),
-                message_title=form.message_title.data.strip(),
-                message_content=form.message_content.data.strip(),
-                priority=form.priority.data,
-                teacher_email=form.teacher_email.data.strip().lower(),
-                publish_date=form.publish_date.data,
-                deadline=form.deadline.data
-            )
+    # --------------------------
+    # Filter & Sort logic
+    # --------------------------
+    search = request.args.get('search', '')
+    filter_urgency = request.args.get('urgency', '')
+    sort = request.args.get('sort', '')
 
-            db.session.add(support_msg)
-            db.session.commit()
-            flash(f"Support message '{form.message_title.data}' added successfully!", "success")
-            return redirect(url_for('index'))
+    # Teacher sees only their own; Student sees all
+    query = SupportMessage.query
+    if current_user.role == "teacher":
+        query = query.filter_by(user_id=current_user.id)
 
-        except SQLAlchemyError as e:
-            db.session.rollback()  # Rollback transaction on error
-            flash(f"Error adding message: {str(e)}", "danger")
+    # Search by subject
+    if search:
+        query = query.filter(SupportMessage.subject.ilike(f"%{search}%"))
 
-    # Display all messages in descending order of publication date
-    support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
+    # Filter by urgency
+    if filter_urgency:
+        query = query.filter(SupportMessage.urgency == filter_urgency)
 
+    # Sorting
+    if sort == "priority_desc":
+        query = query.order_by(SupportMessage.urgency.desc())
+    elif sort == "priority_asc":
+        query = query.order_by(SupportMessage.urgency.asc())
+    else:
+        query = query.order_by(SupportMessage.publish_date.desc())
+
+    support_messages = query.all()
+
+    # AI Summary
     ai_summary = ""
-    if request.method == "POST":
+    if request.method == "POST" and current_user.role == "student":
         context = ""
         for msg in support_messages:
-            context += f"Course:{msg.course_name} Title:{msg.message_title} Priority:{msg.priority}\n"
+            context += f"Subject:{msg.subject} Urgency:{msg.urgency}\n"
+        ai_summary = generate_message_summary(context) if context else "No messages to analyze."
 
-        if not context:
-            ai_summary = "⚠️ No messages yet. Please add some first."
-        else:
-            ai_summary = generate_message_summary(context)
     return render_template(
         'index.html',
         current_user=current_user,
@@ -116,9 +121,61 @@ def index():
         ai_summary=ai_summary
     )
 
+# ------------------------------
+# New Message (Teacher Only)
+# ------------------------------
+@app.route('/new-message', methods=['GET', 'POST'])
+@login_required
+def new_message():
+    if current_user.role != "teacher":
+        flash("Only teachers can create messages", "danger")
+        return redirect(url_for('index'))
+
+    form = SupportMessageForm()
+    if form.validate_on_submit():
+        try:
+            support_msg = SupportMessage(
+                subject=form.subject.data.strip(),
+                message_content=form.message_content.data.strip(),
+                urgency=form.urgency.data,
+                teacher_email=current_user.email,
+                teacher_name=current_user.username,
+                teacher_school_id=current_user.school_id,
+                user_id=current_user.id,
+                publish_date=date.today()
+            )
+            db.session.add(support_msg)
+            db.session.flush()
+
+            files = request.files.getlist("files")
+            for file in files:
+                if file and allowed_file(file.filename):
+                    original_filename = secure_filename(file.filename)
+                    ext = original_filename.rsplit('.', 1)[1].lower()
+                    stored_filename = f"{uuid.uuid4()}.{ext}"
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], stored_filename))
+
+                    new_file = UploadFile(
+                        filename=original_filename,
+                        stored_name=stored_filename,
+                        message_id=support_msg.id,
+                        user_id=current_user.id
+                    )
+                    db.session.add(new_file)
+
+            db.session.commit()
+            flash(f"Message '{form.subject.data}' created successfully!", "success")
+            return redirect(url_for('index'))
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash(f"Error creating message: {str(e)}", "danger")
+
+    return render_template("new_message.html", form=form)
+
 
 # List page: Display all messages in descending order of priority
-@app.route('/listing', methods=['GET', 'POST'])
+#@app.route('/listing', methods=['GET', 'POST'])
 @login_required
 def listing_messages():
     # In descending order of priority (with high priority first)
@@ -129,7 +186,7 @@ def listing_messages():
 
 
 # Search page: Search for messages by teacher email
-@app.route('/searching', methods=['GET', 'POST'])
+#@app.route('/searching', methods=['GET', 'POST'])
 @login_required
 def search_messages():
     email = request.args.get("email", "").strip().lower()
@@ -161,7 +218,7 @@ def search_messages():
 
 
 # Advanced search: by priority/ranking/average score (priority)
-@app.route('/more_searching', methods=['GET', 'POST'])
+#@app.route('/more_searching', methods=['GET', 'POST'])
 @login_required
 def more_search():
     query = SupportMessage.query
@@ -204,75 +261,138 @@ def more_search():
     )
 
 
-@app.route('/upload', methods=['GET', 'POST'])
+# @app.route('/upload', methods=['GET', 'POST'])
+# @login_required
+# def file_upload():
+#     # Only teachers can upload files
+#     if current_user.role != "teacher":
+#         flash("Only teachers can upload files", "danger")
+#         return redirect(url_for('index'))
+#     # Create an object for upload form
+#     form = TeacherUpload()
+#     filename = None
+#     # Create path for json file to store upload records
+#     file_path = os.path.join(
+#         current_app.root_path, 'static', 'uploads.json')
+#     try:
+#         with open(file_path, "r") as file:
+#             feedback_store = json.load(file)
+#     except FileNotFoundError:
+#         feedback_store = []
+#
+#     # Save upload data to json file
+#     if form.validate_on_submit():
+#         upload_data = {
+#             "teacher_name": form.teacher_name.data,
+#             "course_name": form.course_name.data,
+#             "remark": form.remark.data,
+#             "filename": filename,
+#             "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#         }
+#         feedback_store.append(upload_data)
+#         with open(file_path, "w") as file:
+#             json.dump(feedback_store, file, indent=4)
+#         # Get uploaded file and save to uploads directory
+#         file = form.file.data
+#         # Handle file upload, then prepare for listing files and downloading
+#         if file:
+#             filename = secure_filename(
+#                 file.filename)  # secure_filename ensures safe filename storage
+#             uploaded_folder = current_app.config[
+#                 'UPLOAD_FOLDER']  # Get upload folder from app config
+#             file.save(os.path.join(uploaded_folder, filename))
+#             flash("File uploaded successfully!")
+#             return redirect(url_for("file_upload", filename=filename))
+#     # List all files (exclude .gitkeep) for downloading
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+#     # Get filename from request args
+#     filename = request.args.get('filename')
+#     # Render template for form, uploads and downloads
+#     return render_template("upload.html", form=form, filename=filename, files=files)
+#
+#
+# @app.route('/uploads/<filename>')
+# @login_required
+# def download_file(filename):
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     return send_from_directory(
+#         uploaded_folder,
+#         filename,
+#         as_attachment=True,
+#         environ=request.environ)
+#
+#
+# @app.route('/downloads')
+# @login_required
+# def downloads():
+#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
+#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
+#     files.sort(reverse=True)
+#     return render_template('downloads.html', files=files)
+# ====================== FILE UPLOAD / DOWNLOAD / DELETE ======================
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED
+
+# file list
+@app.route('/files')
+@login_required
+def files():
+    # teacher can see own files
+    if current_user.role == "teacher":
+        files = UploadFile.query.filter_by(user_id=current_user.id).order_by(UploadFile.upload_time.desc()).all()
+    else:
+        # student can see all files
+        files = UploadFile.query.order_by(UploadFile.upload_time.desc()).all()
+    return render_template('files.html', files=files)
+
+
+# upload file
+@app.route('/upload', methods=['GET','POST'])
 @login_required
 def file_upload():
-    # Only teachers can upload files
-    if current_user.role != "teacher":
-        flash("Only teachers can upload files", "danger")
-        return redirect(url_for('index'))
-    # Create an object for upload form
+    if current_user.role != 'teacher':
+        flash('Only teachers can upload','danger')
+        return redirect(url_for('files'))
+
     form = TeacherUpload()
-    filename = None
-    # Create path for json file to store upload records
-    file_path = os.path.join(
-        current_app.root_path, 'static', 'uploads.json')
-    try:
-        with open(file_path, "r") as file:
-            feedback_store = json.load(file)
-    except FileNotFoundError:
-        feedback_store = []
-
-    # Save upload data to json file
     if form.validate_on_submit():
-        upload_data = {
-            "teacher_name": form.teacher_name.data,
-            "course_name": form.course_name.data,
-            "remark": form.remark.data,
-            "filename": filename,
-            "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        feedback_store.append(upload_data)
-        with open(file_path, "w") as file:
-            json.dump(feedback_store, file, indent=4)
-        # Get uploaded file and save to uploads directory
-        file = form.file.data
-        # Handle file upload, then prepare for listing files and downloading
-        if file:
-            filename = secure_filename(
-                file.filename)  # secure_filename ensures safe filename storage
-            uploaded_folder = current_app.config[
-                'UPLOAD_FOLDER']  # Get upload folder from app config
-            file.save(os.path.join(uploaded_folder, filename))
-            flash("File uploaded successfully!")
-            return redirect(url_for("file_upload", filename=filename))
-    # List all files (exclude .gitkeep) for downloading
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    # Get filename from request args
-    filename = request.args.get('filename')
-    # Render template for form, uploads and downloads
-    return render_template("upload.html", form=form, filename=filename, files=files)
+        f = form.file.data
+        if f and allowed_file(f.filename):
+            orig = secure_filename(f.filename)
+            ext = orig.rsplit('.',1)[1].lower()
+            stored = f"{uuid.uuid4()}.{ext}"
+            f.save(os.path.join(UPLOAD_FOLDER, stored))
 
+            newfile = UploadFile(
+                filename=orig,
+                stored_name=stored,
+                subject=form.subject.data,
+                teacher_name=form.teacher_name.data,
+                remark=form.remark.data,
+                user_id=current_user.id
+            )
+            db.session.add(newfile)
+            db.session.commit()
+            flash('Upload success!','success')
+            return redirect(url_for('files'))
 
-@app.route('/uploads/<filename>')
+    return render_template('upload.html', form=form)
+
+# download file
+@app.route('/download/<int:file_id>')
 @login_required
-def download_file(filename):
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
+def download_file(file_id):
+    f = UploadFile.query.get_or_404(file_id)
     return send_from_directory(
-        uploaded_folder,
-        filename,
+        app.config['UPLOAD_FOLDER'],
+        f.stored_name,
         as_attachment=True,
-        environ=request.environ)
+        download_name=f.filename
+    )
 
-
-@app.route('/downloads')
-@login_required
-def downloads():
-    uploaded_folder = current_app.config['UPLOAD_FOLDER']
-    files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-    files.sort(reverse=True)
-    return render_template('downloads.html', files=files)
 
 
 # ====================== [Modified] New Survey System Routes ======================
@@ -760,3 +880,118 @@ def manage_time_slots():
 
     return render_template('manage_time_slots.html', form=form, slots=my_slots)
 # ====================== End of Appointment Routes ======================
+
+# ------------------------------
+# Message Detail (Mark as Read)
+# ------------------------------
+@app.route('/message/<int:msg_id>')
+@login_required
+def message_detail(msg_id):
+    """View single message and mark as read for students"""
+    msg = SupportMessage.query.get_or_404(msg_id)
+
+    # Permission: teacher can only view their own
+    if current_user.role == "teacher" and msg.user_id != current_user.id:
+        flash("You cannot view this message", "danger")
+        return redirect(url_for('index'))
+
+    # Mark as read if student
+    if current_user.role == "student":
+        exists = MessageRead.query.filter_by(
+            user_id=current_user.id,
+            message_id=msg_id
+        ).first()
+        if not exists:
+            read_record = MessageRead(
+                user_id=current_user.id,
+                message_id=msg_id
+            )
+            db.session.add(read_record)
+            db.session.commit()
+
+    return render_template("message_detail.html", message=msg)
+
+
+# ------------------------------
+# Edit Message (Teacher Only)
+# ------------------------------
+@app.route('/edit/<int:msg_id>', methods=['GET', 'POST'])
+@login_required
+def message_edit(msg_id):
+    msg = SupportMessage.query.get_or_404(msg_id)
+    if msg.user_id != current_user.id:
+        flash("Permission denied")
+        return redirect(url_for('index'))
+
+    form = SupportMessageForm(obj=msg)
+    if form.validate_on_submit():
+        # 1. update
+        msg.subject = form.subject.data.strip()
+        msg.message_content = form.message_content.data.strip()
+        msg.urgency = form.urgency.data
+
+        # 2. update new files
+        files = request.files.getlist("files")
+        for file in files:
+            if file and allowed_file(file.filename):
+                orig = secure_filename(file.filename)
+                ext = orig.rsplit('.',1)[1].lower()
+                stored = f"{uuid.uuid4()}.{ext}"
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], stored))
+                new_file = UploadFile(
+                    filename=orig,
+                    stored_name=stored,
+                    message_id=msg.id,
+                    user_id=current_user.id
+                )
+                db.session.add(new_file)
+
+        db.session.commit()
+        flash("Message updated successfully, new attachments added")
+        return redirect(url_for('index'))
+
+    return render_template("edit_message.html", form=form, message=msg)
+
+
+# ------------------------------
+# Delete Message (Teacher Only)
+# ------------------------------
+@app.route('/delete/<int:msg_id>')
+@login_required
+def message_delete(msg_id):
+    msg = SupportMessage.query.get_or_404(msg_id)
+
+    if msg.user_id != current_user.id:
+        flash("No permission")
+        return redirect(url_for('index'))
+
+    # delete files
+    for f in msg.files:
+        path = os.path.join(UPLOAD_FOLDER, f.stored_name)
+        if os.path.exists(path):
+            os.remove(path)
+
+    # delete message and files
+    db.session.delete(msg)
+    db.session.commit()
+    flash("Message and all files deleted")
+    return redirect(url_for('index'))
+
+# delete files
+@app.route('/delete/file/<int:file_id>')
+@login_required
+def delete_file_msg(file_id):
+    f = UploadFile.query.get_or_404(file_id)
+    if f.user_id != current_user.id:
+        flash("You can only delete your own files", "danger")
+        return redirect(url_for('index'))
+
+    path = os.path.join(app.config['UPLOAD_FOLDER'], f.stored_name)
+    if os.path.exists(path):
+        os.remove(path)
+
+    db.session.delete(f)
+    db.session.commit()
+    flash("File deleted successfully", "success")
+
+    return redirect(url_for('message_edit', msg_id=f.message_id))

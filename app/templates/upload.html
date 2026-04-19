@@ -1,45 +1,27 @@
 {% extends "base.html" %}
-
-{% block title %}Provide feedback{% endblock %}
+{% block title %}Upload{% endblock %}
 
 {% block content %}
-<h1>File Upload</h1>
+<h1>Upload File</h1>
 
 <form method="POST" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
 
-    {{ form.teacher_name.label }}
-    {{ form.teacher_name }}<br>
+    {{ form.teacher_name.label }}<br>
+    {{ form.teacher_name }}<br><br>
 
-    {{ form.course_name.label }}
-    {{ form.course_name }}<br>
+    {{ form.subject.label }}<br>
+    {{ form.subject }}<br><br>
 
-    {{ form.remark.label }}
-    {{ form.remark }}<br>
+    {{ form.remark.label }}<br>
+    {{ form.remark }}<br><br>
 
-    {{ form.file.label }} <br>
-    {{ form.file }} <br><br><br>
-
-    {% if filename and filename|length > 0 %}
-        <p>File uploaded successfully! {{ filename }}</p>
-        <a href="{{ url_for('download_file', filename=filename) }}">
-            Download current file
-        </a><br><br>
-    {% endif %}
-
-    <a href="{{ url_for('downloads') }}">
-        Download All files
-    </a>
-
-    <div>
-      <a href="{{ url_for('index') }}">
-        Return to Home Page
-      </a>
-    </div>
+    {{ form.file.label }}<br>
+    {{ form.file }}<br><br>
 
     {{ form.submit }}
 </form>
 
-
-
+<br>
+<a href="{{ url_for('files') }}">Back to Files</a>
 {% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edit Message</h2>
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <p>
+        {{ form.subject.label }}<br>
+        {{ form.subject(size=70, style="padding:6px; width:100%;") }}
+    </p>
+    <p>
+        {{ form.message_content.label }}<br>
+        {{ form.message_content(rows=6, cols=70, style="padding:6px; width:100%;") }}
+    </p>
+    <p>
+        {{ form.urgency.label }}<br>
+        {{ form.urgency(style="padding:6px;") }}
+    </p>
+
+
+    {% if message.files %}
+    <div style="padding:10px; background:#f8f9fa; border-radius:6px;">
+        <strong>Attachments:</strong>
+        <ul style="margin:5px 0;padding-left:20px;">
+            {% for file in message.files %}
+            <li>
+                <!-- ✅ 这里加上下载链接！我只改了这一行！ -->
+                <a href="{{ url_for('download_file', file_id=file.id) }}">
+                    {{ file.filename }}
+                </a>
+
+                <a href="{{ url_for('delete_file_msg', file_id=file.id) }}"
+                   style="color:red; font-size:12px;"
+                   onclick="return confirm('Delete?')">
+                    Delete
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <br>
+    {% endif %}
+
+
+    <p>
+        Add new attachments:<br>
+        <input type="file" name="files" multiple>
+    </p>
+
+    <p>
+        {{ form.submit(style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px;") }}
+        <a href="{{ url_for('index') }}" style="margin-left:10px;">Cancel</a>
+    </p>
+</form>
+{% endblock %}

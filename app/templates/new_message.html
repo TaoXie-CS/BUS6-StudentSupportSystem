@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>New Message</h2>
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+
+    <p>
+        {{ form.subject.label }}<br>
+        {{ form.subject(size=70, style="padding:6px; width:100%;") }}
+        {% for error in form.subject.errors %}
+            <span style="color:red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.message_content.label }}<br>
+        {{ form.message_content(rows=6, cols=70, style="padding:6px; width:100%;") }}
+        {% for error in form.message_content.errors %}
+            <span style="color:red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        {{ form.urgency.label }}<br>
+        {{ form.urgency(style="padding:6px;") }}
+        {% for error in form.urgency.errors %}
+            <span style="color:red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+
+    <p>
+        Add attachments:<br>
+        <input type="file" name="files" multiple>
+    </p>
+
+    <p>
+        {{ form.submit(style="padding:8px 16px; background:#007bff; color:white; border:none; border-radius:4px;") }}
+        <a href="{{ url_for('index') }}" style="margin-left:10px;">Cancel</a>
+    </p>
+</form>
+{% endblock %}

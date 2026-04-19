@@ -8,66 +8,37 @@ from flask_wtf.file import FileField, FileAllowed
 
 
 # Support Message Submission Form (Core business form)
+# Support Message Submission Form (Simplified)
 class SupportMessageForm(FlaskForm):
-    course_name = StringField(
-        "Course Name",
+    subject = StringField(
+        "Subject",
         validators=[
-            DataRequired(message="Course name is required"),
-            Length(max=256, message="Course name cannot exceed 256 characters")
-        ]
-    )
-
-    message_title = StringField(
-        "Message Title",
-        validators=[
-            DataRequired(message="Message title is required"),
-            Length(max=256, message="Title cannot exceed 256 characters")
+            DataRequired(message="Subject is required"),
+            Length(max=256, message="Subject cannot exceed 256 characters")
         ]
     )
 
     message_content = TextAreaField(
         "Message Content",
         validators=[
-            DataRequired(message="Message content is required"),
+            DataRequired(message="Content is required"),
             Length(max=500, message="Content cannot exceed 500 characters")
         ]
     )
 
-    # Priority level (1-10, default value = 5)
-    priority = IntegerField(
-        "Priority (1-10)",
-        validators=[
-            DataRequired(message="Priority is required"),
-            NumberRange(min=1, max=10, message="Priority must be between 1 and 10")
+    # Urgency level (only two options)
+    urgency = SelectField(
+        "Urgency",
+        choices=[
+            ("urgent", "Urgent"),
+            ("non-urgent", "Non-urgent")
         ],
-        default=5
+        validators=[DataRequired(message="Please select urgency level")]
     )
+    #files upload
+    files = FileField("Attach files (multiple)", render_kw={"multiple": True})
 
-    teacher_email = StringField(
-        "Teacher Email",
-        validators=[
-            DataRequired(message="Teacher email is required"),
-            Email(message="Please enter a valid email address")
-        ]
-    )
-
-    # Publish date (default value = current date)
-    publish_date = DateField(
-        "Publish Date",
-        format="%Y-%m-%d",
-        default=date.today,
-        validators=[DataRequired(message="Publish date is required")]
-    )
-
-    # Deadline date (default value = current date)
-    deadline = DateField(
-        "Deadline",
-        format="%Y-%m-%d",
-        default=date.today,
-        validators=[DataRequired(message="Deadline is required")]
-    )
-
-    submit = SubmitField("Submit Support Message")
+    submit = SubmitField("Submit Message")
 
 
 # Teacher File Upload Form
@@ -77,8 +48,8 @@ class TeacherUpload(FlaskForm):
         validators=[DataRequired()]
     )
 
-    course_name = StringField(
-        "Course Name",
+    subject = StringField(
+        "subject",
         validators=[DataRequired()]
     )
 

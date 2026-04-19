@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>{{ message.subject }}</h2>
+<p><strong>Urgency:</strong> {{ message.urgency }}</p>
+<p><strong>Teacher:</strong> {{ message.teacher_name }} | {{ message.teacher_email }}</p>
+<p><strong>Published:</strong> {{ message.publish_date.strftime('%Y-%m-%d') }}</p>
+<hr>
+<div style="white-space: pre-wrap; padding: 10px 0;">
+    {{ message.message_content }}
+</div>
+<br>
+
+<!-- files zone -->
+<h2>Attachments</h2>
+{% for file in message.files %}
+    <div>
+        <!-- download file -->
+        <a href="{{ url_for('download_file', file_id=file.id) }}">
+            {{ file.filename }}
+        </a>
+    </div>
+{% endfor %}
+
+<a href="{{ url_for('index') }}">Back to list</a>
+{% endblock %}
