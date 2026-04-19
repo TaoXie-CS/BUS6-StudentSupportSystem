@@ -33,34 +33,37 @@ class SupportMessage(db.Model):
     # Primary key (unique identifier for each message)
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-    # Course name (indexed for fast search, max length 256, non-nullable)
-    course_name: so.Mapped[str] = so.mapped_column(sa.String(256), index=True, nullable=False)
-
-    # Message title (indexed for fast search, max length 256, non-nullable)
-    message_title: so.Mapped[str] = so.mapped_column(sa.String(256), index=True, nullable=False)
+    # Subject (renamed from message_title, removed course_name)
+    subject: so.Mapped[str] = so.mapped_column(sa.String(256), index=True, nullable=False)
 
     # Message content (long text, max length 500, indexed for fast search, non-nullable)
     message_content: so.Mapped[str] = so.mapped_column(sa.String(500), index=True, nullable=False)
 
-    # Priority level (1-10, default value 5, indexed, non-nullable)
-    priority: so.Mapped[int] = so.mapped_column(sa.Integer, index=True, nullable=False, default=5)
+    # Urgency: urgent / non-urgent (replaced numeric priority 1-10)
+    urgency: so.Mapped[str] = so.mapped_column(sa.String(20), index=True, nullable=False)
 
     # Teacher email address (max length 255, non-unique, indexed for fast search, non-nullable)
     teacher_email: so.Mapped[str] = so.mapped_column(sa.String(255), nullable=False, unique=False, index=True)
 
-    # Publish date (date only, no time component, default to current date, non-nullable)
+    # Teacher name (auto filled from login user)
+    teacher_name: so.Mapped[str] = so.mapped_column(sa.String(100), nullable=False)
+
+    # Teacher school ID (auto filled from login user)
+    teacher_school_id: so.Mapped[str] = so.mapped_column(sa.String(50), nullable=False)
+
+    # Publish date (auto set on submission, used for query and AI analysis)
     publish_date: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
 
-    # Deadline date (date only, no time component, default to current date, non-nullable)
-    deadline: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False, default=date.today)
     # User ID
     user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
     # Author
     author: so.Mapped["User"] = so.relationship(back_populates="messages")
 
+    # Read records for students
+    read_records = db.relationship('MessageRead', backref='message', lazy=True, passive_deletes=True)
+
     def __repr__(self):
-        # String representation for debugging (consistent format)
-        return f'<SupportMessage {self.id} - {self.message_title} ({self.course_name})>'
+        return f'<SupportMessage {self.id} - {self.subject}>'
 
 
 # ====================== [Modified] New Survey Response Model ======================
@@ -149,3 +152,20 @@ class Appointment(db.Model):
     def __repr__(self):
         return f'<Appointment {self.id} - {self.status}>'
 # ===================== End of Appointment System =====================
+
+# Message read status (student view tracking)
+class MessageRead(db.Model):
+    __tablename__ = "message_read"
+
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
+    user_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
+    message_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("support_message.id"), nullable=False)
+    read_at: so.Mapped[datetime] = so.mapped_column(sa.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # One user can only read one message once
+    __table_args__ = (
+        sa.UniqueConstraint('user_id', 'message_id', name='_user_message_uc'),
+    )
+
+    def __repr__(self):
+        return f"<MessageRead user={self.user_id} message={self.message_id}>"

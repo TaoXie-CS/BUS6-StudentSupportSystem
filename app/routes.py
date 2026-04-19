@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename, send_from_directory
 
 from app import app
 from app import db
-from app.models import SupportMessage, NewSurveyResponse
+from app.models import SupportMessage, NewSurveyResponse,MessageRead
 from app.forms import SupportMessageForm, TeacherUpload, SurveyBasicInfoForm, SurveyTypeForm, LearningSurveyForm, \
     ManagementSurveyForm, TeachingSurveyForm
 from app.models import SupportMessage, TimeSlot, Appointment
@@ -68,46 +68,72 @@ def logout():
 def index():
     form = SupportMessageForm()
 
+    # Teacher submits a new message
     if form.validate_on_submit():
-        # Only teachers could create message
+        # Only teachers can create messages
         if current_user.role != "teacher":
             flash("Only teachers can post messages", "danger")
             return redirect(url_for('index'))
         try:
-            # Create a support message record
+            # Create message with auto-filled teacher info
             support_msg = SupportMessage(
-                user_id=current_user.id,
-                course_name=form.course_name.data.strip(),
-                message_title=form.message_title.data.strip(),
+                subject=form.subject.data.strip(),
                 message_content=form.message_content.data.strip(),
-                priority=form.priority.data,
-                teacher_email=form.teacher_email.data.strip().lower(),
-                publish_date=form.publish_date.data,
-                deadline=form.deadline.data
+                urgency=form.urgency.data,
+                teacher_email=current_user.email,
+                teacher_name=current_user.username,
+                teacher_school_id=current_user.school_id,
+                user_id=current_user.id,
+                publish_date=date.today()
             )
 
             db.session.add(support_msg)
             db.session.commit()
-            flash(f"Support message '{form.message_title.data}' added successfully!", "success")
+            flash(f"Message '{form.subject.data}' created successfully!", "success")
             return redirect(url_for('index'))
 
         except SQLAlchemyError as e:
-            db.session.rollback()  # Rollback transaction on error
-            flash(f"Error adding message: {str(e)}", "danger")
+            db.session.rollback()
+            flash(f"Error creating message: {str(e)}", "danger")
 
-    # Display all messages in descending order of publication date
-    support_messages = SupportMessage.query.order_by(SupportMessage.publish_date.desc()).all()
+    # --------------------------
+    # Filter & Sort logic
+    # --------------------------
+    search = request.args.get('search', '')
+    filter_urgency = request.args.get('urgency', '')
+    sort = request.args.get('sort', '')
 
+    # Teacher sees only their own; Student sees all
+    query = SupportMessage.query
+    if current_user.role == "teacher":
+        query = query.filter_by(user_id=current_user.id)
+
+    # Search by subject
+    if search:
+        query = query.filter(SupportMessage.subject.ilike(f"%{search}%"))
+
+    # Filter by urgency
+    if filter_urgency:
+        query = query.filter(SupportMessage.urgency == filter_urgency)
+
+    # Sorting
+    if sort == "priority_desc":
+        query = query.order_by(SupportMessage.urgency.desc())
+    elif sort == "priority_asc":
+        query = query.order_by(SupportMessage.urgency.asc())
+    else:
+        query = query.order_by(SupportMessage.publish_date.desc())
+
+    support_messages = query.all()
+
+    # AI Summary
     ai_summary = ""
-    if request.method == "POST":
+    if request.method == "POST" and current_user.role == "student":
         context = ""
         for msg in support_messages:
-            context += f"Course:{msg.course_name} Title:{msg.message_title} Priority:{msg.priority}\n"
+            context += f"Subject:{msg.subject} Urgency:{msg.urgency}\n"
+        ai_summary = generate_message_summary(context) if context else "No messages to analyze."
 
-        if not context:
-            ai_summary = "⚠️ No messages yet. Please add some first."
-        else:
-            ai_summary = generate_message_summary(context)
     return render_template(
         'index.html',
         current_user=current_user,
@@ -118,7 +144,7 @@ def index():
 
 
 # List page: Display all messages in descending order of priority
-@app.route('/listing', methods=['GET', 'POST'])
+#@app.route('/listing', methods=['GET', 'POST'])
 @login_required
 def listing_messages():
     # In descending order of priority (with high priority first)
@@ -129,7 +155,7 @@ def listing_messages():
 
 
 # Search page: Search for messages by teacher email
-@app.route('/searching', methods=['GET', 'POST'])
+#@app.route('/searching', methods=['GET', 'POST'])
 @login_required
 def search_messages():
     email = request.args.get("email", "").strip().lower()
@@ -161,7 +187,7 @@ def search_messages():
 
 
 # Advanced search: by priority/ranking/average score (priority)
-@app.route('/more_searching', methods=['GET', 'POST'])
+#@app.route('/more_searching', methods=['GET', 'POST'])
 @login_required
 def more_search():
     query = SupportMessage.query
@@ -729,3 +755,76 @@ def manage_time_slots():
 
     return render_template('manage_time_slots.html', form=form, slots=my_slots)
 # ====================== End of Appointment Routes ======================
+
+# ------------------------------
+# Message Detail (Mark as Read)
+# ------------------------------
+@app.route('/message/<int:msg_id>')
+@login_required
+def message_detail(msg_id):
+    """View single message and mark as read for students"""
+    msg = SupportMessage.query.get_or_404(msg_id)
+
+    # Permission: teacher can only view their own
+    if current_user.role == "teacher" and msg.user_id != current_user.id:
+        flash("You cannot view this message", "danger")
+        return redirect(url_for('index'))
+
+    # Mark as read if student
+    if current_user.role == "student":
+        exists = MessageRead.query.filter_by(
+            user_id=current_user.id,
+            message_id=msg_id
+        ).first()
+        if not exists:
+            read_record = MessageRead(
+                user_id=current_user.id,
+                message_id=msg_id
+            )
+            db.session.add(read_record)
+            db.session.commit()
+
+    return render_template("message_detail.html", message=msg)
+
+
+# ------------------------------
+# Edit Message (Teacher Only)
+# ------------------------------
+@app.route('/edit/<int:msg_id>', methods=['GET', 'POST'])
+@login_required
+def message_edit(msg_id):
+    """Edit own message (teacher only)"""
+    msg = SupportMessage.query.get_or_404(msg_id)
+
+    if msg.user_id != current_user.id:
+        flash("Permission denied", "danger")
+        return redirect(url_for('index'))
+
+    form = SupportMessageForm(obj=msg)
+
+    if form.validate_on_submit():
+        msg.subject = form.subject.data.strip()
+        msg.message_content = form.message_content.data.strip()
+        msg.urgency = form.urgency.data
+        db.session.commit()
+        flash("Message updated successfully", "success")
+        return redirect(url_for('index'))
+
+    return render_template("edit_message.html", form=form, message=msg)
+
+
+# ------------------------------
+# Delete Message (Teacher Only)
+# ------------------------------
+@app.route('/delete/<int:msg_id>')
+@login_required
+def message_delete(msg_id):
+    """Delete own message (teacher only)"""
+    msg = SupportMessage.query.get_or_404(msg_id)
+
+    if msg.user_id == current_user.id:
+        db.session.delete(msg)
+        db.session.commit()
+        flash("Message deleted", "success")
+
+    return redirect(url_for('index'))

@@ -23,49 +23,49 @@ db.session.add_all([u1, u2, u3, u4])
 db.session.commit()
 
 # ========================
-# 2. messages：4messages
+# 2. messages：4messages（已按新字段修改）
 # ========================
 msg1 = SupportMessage(
-    course_name="Python",
-    message_title="Exam Release Notice",
+    subject="Exam Release Notice",
     message_content="Python midterm exam will be held next Friday. Please review chapters 1-6.",
-    priority=5,
+    urgency="urgent",
     teacher_email="sam@school.com",
+    teacher_name="sam",
+    teacher_school_id="T2026001",
     publish_date=date.today(),
-    deadline=date(2026, 4, 28),
     user_id=u1.id
 )
 
 msg2 = SupportMessage(
-    course_name="Java",
-    message_title="Homework Release Notice",
+    subject="Homework Release Notice",
     message_content="Please finish Java OOP homework and submit before next Wednesday.",
-    priority=4,
+    urgency="non-urgent",
     teacher_email="sam@school.com",
+    teacher_name="sam",
+    teacher_school_id="T2026001",
     publish_date=date.today(),
-    deadline=date(2026, 4, 23),
     user_id=u1.id
 )
 
 msg3 = SupportMessage(
-    course_name="Computer Science",
-    message_title="Exam Release Notice",
+    subject="Exam Release Notice",
     message_content="Computer Science final exam arrangement released. Check details.",
-    priority=5,
+    urgency="urgent",
     teacher_email="lora@school.com",
+    teacher_name="lora",
+    teacher_school_id="T2026002",
     publish_date=date.today(),
-    deadline=date(2026, 5, 10),
     user_id=u2.id
 )
 
 msg4 = SupportMessage(
-    course_name="Machine Learning",
-    message_title="Homework Release Notice",
+    subject="Homework Release Notice",
     message_content="ML model training assignment is now published. Please submit on time.",
-    priority=3,
+    urgency="non-urgent",
     teacher_email="lora@school.com",
+    teacher_name="lora",
+    teacher_school_id="T2026002",
     publish_date=date.today(),
-    deadline=date(2026, 4, 25),
     user_id=u2.id
 )
 
@@ -76,5 +76,5 @@ db.session.commit()
 print("success！")
 print("teacher：Sam, Lora")
 print("student：Tom, Jane")
-print("message：Python, Java, CS, ML")
+print("message：4 test messages created")
 exit()
