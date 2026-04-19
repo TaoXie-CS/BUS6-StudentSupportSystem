@@ -38,7 +38,7 @@ def register():
             username=form.username.data,
             email=form.email.data,
             role=form.role.data,
-            teacher_type=form.teacher_type.data if form.role.data == "teacher" else ""  # 确保保存
+            teacher_type=form.teacher_type.data if form.role.data == "teacher" else ""
         )
         user.set_password(form.password.data)
         db.session.add(user)
@@ -75,27 +75,19 @@ def logout():
 def index():
     form = SupportMessageForm()
 
-    # --------------------------
-    # Filter & Sort logic
-    # --------------------------
     search = request.args.get('search', '')
     filter_urgency = request.args.get('urgency', '')
     sort = request.args.get('sort', '')
 
-    # Teacher sees only their own; Student sees all
     query = SupportMessage.query
     if current_user.role == "teacher":
         query = query.filter_by(user_id=current_user.id)
 
-    # Search by subject
     if search:
         query = query.filter(SupportMessage.subject.ilike(f"%{search}%"))
-
-    # Filter by urgency
     if filter_urgency:
         query = query.filter(SupportMessage.urgency == filter_urgency)
 
-    # Sorting
     if sort == "priority_desc":
         query = query.order_by(SupportMessage.urgency.desc())
     elif sort == "priority_asc":
@@ -105,20 +97,34 @@ def index():
 
     support_messages = query.all()
 
-    # AI Summary
     ai_summary = ""
     if request.method == "POST" and current_user.role == "student":
-        context = ""
-        for msg in support_messages:
-            context += f"Subject:{msg.subject} Urgency:{msg.urgency}\n"
-        ai_summary = generate_message_summary(context) if context else "No messages to analyze."
+
+        action = request.form.get("ai_action")
+
+
+        if action:
+            context = ""
+            for msg in support_messages:
+
+                content_snippet = msg.message_content[:150] if msg.message_content else ""
+                context += f"Subject: {msg.subject} | Info: {content_snippet}\n"
+
+            if context:
+
+                ai_summary = generate_message_summary(context, mode=action)
+            else:
+                ai_summary = "No messages available to analyze."
 
     return render_template(
         'index.html',
         current_user=current_user,
         form=form,
         student_infos=support_messages,
-        ai_summary=ai_summary
+        ai_summary=ai_summary,
+        search=search,
+        urgency=filter_urgency,
+        sort=sort
     )
 
 # ------------------------------
