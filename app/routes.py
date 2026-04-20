@@ -102,16 +102,13 @@ def index():
 
         action = request.form.get("ai_action")
 
-
         if action:
             context = ""
             for msg in support_messages:
-
                 content_snippet = msg.message_content[:150] if msg.message_content else ""
                 context += f"Subject: {msg.subject} | Info: {content_snippet}\n"
 
             if context:
-
                 ai_summary = generate_message_summary(context, mode=action)
             else:
                 ai_summary = "No messages available to analyze."
@@ -181,7 +178,6 @@ def new_message():
 
 
 # List page: Display all messages in descending order of priority
-#@app.route('/listing', methods=['GET', 'POST'])
 @login_required
 def listing_messages():
     # In descending order of priority (with high priority first)
@@ -192,7 +188,6 @@ def listing_messages():
 
 
 # Search page: Search for messages by teacher email
-#@app.route('/searching', methods=['GET', 'POST'])
 @login_required
 def search_messages():
     email = request.args.get("email", "").strip().lower()
@@ -224,7 +219,6 @@ def search_messages():
 
 
 # Advanced search: by priority/ranking/average score (priority)
-#@app.route('/more_searching', methods=['GET', 'POST'])
 @login_required
 def more_search():
     query = SupportMessage.query
@@ -266,76 +260,6 @@ def more_search():
         results1_final=avg_priority_final
     )
 
-
-# @app.route('/upload', methods=['GET', 'POST'])
-# @login_required
-# def file_upload():
-#     # Only teachers can upload files
-#     if current_user.role != "teacher":
-#         flash("Only teachers can upload files", "danger")
-#         return redirect(url_for('index'))
-#     # Create an object for upload form
-#     form = TeacherUpload()
-#     filename = None
-#     # Create path for json file to store upload records
-#     file_path = os.path.join(
-#         current_app.root_path, 'static', 'uploads.json')
-#     try:
-#         with open(file_path, "r") as file:
-#             feedback_store = json.load(file)
-#     except FileNotFoundError:
-#         feedback_store = []
-#
-#     # Save upload data to json file
-#     if form.validate_on_submit():
-#         upload_data = {
-#             "teacher_name": form.teacher_name.data,
-#             "course_name": form.course_name.data,
-#             "remark": form.remark.data,
-#             "filename": filename,
-#             "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#         }
-#         feedback_store.append(upload_data)
-#         with open(file_path, "w") as file:
-#             json.dump(feedback_store, file, indent=4)
-#         # Get uploaded file and save to uploads directory
-#         file = form.file.data
-#         # Handle file upload, then prepare for listing files and downloading
-#         if file:
-#             filename = secure_filename(
-#                 file.filename)  # secure_filename ensures safe filename storage
-#             uploaded_folder = current_app.config[
-#                 'UPLOAD_FOLDER']  # Get upload folder from app config
-#             file.save(os.path.join(uploaded_folder, filename))
-#             flash("File uploaded successfully!")
-#             return redirect(url_for("file_upload", filename=filename))
-#     # List all files (exclude .gitkeep) for downloading
-#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
-#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-#     # Get filename from request args
-#     filename = request.args.get('filename')
-#     # Render template for form, uploads and downloads
-#     return render_template("upload.html", form=form, filename=filename, files=files)
-#
-#
-# @app.route('/uploads/<filename>')
-# @login_required
-# def download_file(filename):
-#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
-#     return send_from_directory(
-#         uploaded_folder,
-#         filename,
-#         as_attachment=True,
-#         environ=request.environ)
-#
-#
-# @app.route('/downloads')
-# @login_required
-# def downloads():
-#     uploaded_folder = current_app.config['UPLOAD_FOLDER']
-#     files = [f for f in os.listdir(uploaded_folder) if f != ".gitkeep"]
-#     files.sort(reverse=True)
-#     return render_template('downloads.html', files=files)
 # ====================== FILE UPLOAD / DOWNLOAD / DELETE ======================
 
 
@@ -400,15 +324,14 @@ def download_file(file_id):
     )
 
 
-
 # ====================== [Modified] New Survey System Routes ======================
 @app.route('/survey', methods=['GET', 'POST'])
 @login_required
 def survey():
-    """Survey main entry - redirect based on user role"""
+    """Main survey entry - redirect based on user role"""
     if current_user.role != "student":
         # Teachers and other roles cannot fill out surveys
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     # If basic info already exists, go to type selection
@@ -422,9 +345,9 @@ def survey():
 @app.route('/survey/basic_info', methods=['GET', 'POST'])
 @login_required
 def survey_basic_info():
-    """Fill in grade and major information"""
+    """Enter grade and major information"""
     if current_user.role != "student":
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     form = SurveyBasicInfoForm()
@@ -433,7 +356,7 @@ def survey_basic_info():
         # Save to session
         session['survey_grade'] = form.grade.data
         session['survey_major'] = form.major.data
-        flash("Basic information saved, please select survey type", "success")
+        flash("Basic information saved. Please select survey type.", "success")
         return redirect(url_for('select_survey_type'))
 
     return render_template('survey_basic_info.html', form=form)
@@ -444,12 +367,12 @@ def survey_basic_info():
 def select_survey_type():
     """Select survey type"""
     if current_user.role != "student":
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     # Check if basic info exists
     if 'survey_grade' not in session or 'survey_major' not in session:
-        flash("Please fill in basic information first", "warning")
+        flash("Please complete basic information first", "warning")
         return redirect(url_for('survey_basic_info'))
 
     form = SurveyTypeForm()
@@ -472,14 +395,14 @@ def select_survey_type():
 @app.route('/survey/learning', methods=['GET', 'POST'])
 @login_required
 def survey_learning():
-    """Learning Situation Survey"""
+    """Learning Status Survey"""
     if current_user.role != "student":
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     # Check if basic info and type exist
     if 'survey_grade' not in session or 'survey_major' not in session:
-        flash("Please fill in basic information first", "warning")
+        flash("Please complete basic information first", "warning")
         return redirect(url_for('survey_basic_info'))
 
     if 'survey_type' not in session or session.get('survey_type') != 'learning':
@@ -510,7 +433,7 @@ def survey_learning():
             session.pop('survey_major', None)
             session.pop('survey_type', None)
 
-            flash("Learning situation survey submitted successfully! Thank you for your feedback.", "success")
+            flash("Learning survey submitted successfully! Thank you for your feedback.", "success")
             return redirect(url_for('index'))
 
         except Exception as e:
@@ -525,12 +448,12 @@ def survey_learning():
 def survey_management():
     """School Management Satisfaction Survey"""
     if current_user.role != "student":
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     # Check if basic info and type exist
     if 'survey_grade' not in session or 'survey_major' not in session:
-        flash("Please fill in basic information first", "warning")
+        flash("Please complete basic information first", "warning")
         return redirect(url_for('survey_basic_info'))
 
     if 'survey_type' not in session or session.get('survey_type') != 'management':
@@ -562,7 +485,7 @@ def survey_management():
             session.pop('survey_major', None)
             session.pop('survey_type', None)
 
-            flash("School management satisfaction survey submitted successfully! Thank you for your feedback.",
+            flash("School management survey submitted successfully! Thank you for your feedback.",
                   "success")
             return redirect(url_for('index'))
 
@@ -576,14 +499,14 @@ def survey_management():
 @app.route('/survey/teaching', methods=['GET', 'POST'])
 @login_required
 def survey_teaching():
-    """Teacher Teaching Satisfaction Survey"""
+    """Teaching Satisfaction Survey"""
     if current_user.role != "student":
-        flash("Only students can fill out surveys", "danger")
+        flash("Only students can complete surveys", "danger")
         return redirect(url_for('index'))
 
     # Check if basic info and type exist
     if 'survey_grade' not in session or 'survey_major' not in session:
-        flash("Please fill in basic information first", "warning")
+        flash("Please complete basic information first", "warning")
         return redirect(url_for('survey_basic_info'))
 
     if 'survey_type' not in session or session.get('survey_type') != 'teaching':
@@ -596,8 +519,7 @@ def survey_teaching():
         try:
             # If not satisfied but reason not filled, prompt user
             if form.teaching_satisfaction.data == 'no' and not form.dissatisfaction_reason.data:
-                flash("If you are not satisfied with teaching, please fill in the reasons for dissatisfaction",
-                      "warning")
+                flash("Please provide a reason if you are dissatisfied with teaching", "warning")
                 return render_template('survey_teaching.html', form=form)
 
             # Create new survey response record
@@ -620,7 +542,7 @@ def survey_teaching():
             session.pop('survey_major', None)
             session.pop('survey_type', None)
 
-            flash("Teacher teaching satisfaction survey submitted successfully! Thank you for your feedback.",
+            flash("Teaching survey submitted successfully! Thank you for your feedback.",
                   "success")
             return redirect(url_for('index'))
 
@@ -634,11 +556,11 @@ def survey_teaching():
 @app.route('/survey/reset')
 @login_required
 def reset_survey():
-    """Reset survey information, start over"""
+    """Reset survey progress and start over"""
     session.pop('survey_grade', None)
     session.pop('survey_major', None)
     session.pop('survey_type', None)
-    flash("Survey information reset, please fill in again", "info")
+    flash("Survey progress reset. Please start over.", "info")
     return redirect(url_for('survey_basic_info'))
 
 
@@ -650,17 +572,14 @@ def survey_results():
     return redirect(url_for('index'))
 
 # ====================== End of Modified Survey System ======================
-    return render_template("survey_template.html", form=form)
-
-
 # ====================== Appointment System Routes ======================
 
 @app.route('/appointment', methods=['GET', 'POST'])
 @login_required
 def appointment():
-    """学生预约主页"""
+    """Student appointment homepage"""
     if current_user.role != "student":
-        flash("只有学生可以预约", "danger")
+        flash("Only students can make appointments", "danger")
         return redirect(url_for('index'))
 
     form = AppointmentForm()
@@ -670,7 +589,7 @@ def appointment():
 @app.route('/api/teachers/<teacher_type>')
 @login_required
 def get_teachers(teacher_type):
-    """根据老师类型返回老师列表"""
+    """Return teacher list by type"""
     teachers = User.query.filter_by(
         role="teacher",
         teacher_type=teacher_type
@@ -685,16 +604,16 @@ def get_teachers(teacher_type):
 @app.route('/api/available_dates/<int:teacher_id>')
 @login_required
 def get_available_dates(teacher_id):
-    """获取老师有可用时间段的日期列表"""
+    """Get dates with available time slots for the teacher"""
     from datetime import date
 
-    # 查询该老师有可用时间段且未约满的日期
+    # Query dates with available and not fully booked time slots
     available_dates = db.session.query(TimeSlot.date).filter(
         TimeSlot.teacher_id == teacher_id,
         TimeSlot.is_booked == False
     ).distinct().all()
 
-    # 过滤掉所有时间段都被约满的日期
+    # Filter out dates where all slots are fully booked
     result = []
     for (date_obj,) in available_dates:
         total_slots = TimeSlot.query.filter_by(
@@ -715,7 +634,7 @@ def get_available_dates(teacher_id):
 @app.route('/api/time_slots/<int:teacher_id>/<date_str>')
 @login_required
 def get_time_slots(teacher_id, date_str):
-    """获取指定日期的可用时间段"""
+    """Get available time slots for a specific date"""
     from datetime import datetime
     date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
     slots = TimeSlot.query.filter_by(
@@ -733,21 +652,21 @@ def get_time_slots(teacher_id, date_str):
 @app.route('/appointment/submit', methods=['POST'])
 @login_required
 def submit_appointment():
-    """提交预约申请"""
+    """Submit appointment request"""
     if current_user.role != "student":
-        return jsonify({'success': False, 'message': '权限不足'})
+        return jsonify({'success': False, 'message': 'Insufficient permissions'})
 
     data = request.get_json()
     time_slot_id = data.get('time_slot_id')
     description = data.get('description', '')
     appointment_type = data.get('appointment_type')
 
-    # 检查时间段是否已被预约
+    # Check if the time slot is already booked
     time_slot = TimeSlot.query.get(time_slot_id)
     if not time_slot or time_slot.is_booked:
-        return jsonify({'success': False, 'message': '该时间段已被预约'})
+        return jsonify({'success': False, 'message': 'This time slot is already taken'})
 
-    # 创建预约记录
+    # Create appointment record
     appointment = Appointment(
         student_id=current_user.id,
         teacher_id=time_slot.teacher_id,
@@ -757,7 +676,7 @@ def submit_appointment():
         status='confirmed'
     )
 
-    # 标记时间段为已预约
+    # Mark time slot as booked
     time_slot.is_booked = True
 
     db.session.add(appointment)
@@ -765,14 +684,14 @@ def submit_appointment():
 
     return jsonify({
         'success': True,
-        'message': '预约申请已提交，等待老师确认'
+        'message': 'Appointment submitted successfully, awaiting teacher confirmation'
     })
 
 
 @app.route('/my_appointments')
 @login_required
 def my_appointments():
-    """查看我的预约"""
+    """View my appointments"""
     if current_user.role == "teacher":
         appointments = Appointment.query.filter_by(
             teacher_id=current_user.id
@@ -784,66 +703,39 @@ def my_appointments():
     return render_template('my_appointments.html', appointments=appointments)
 
 
-# @app.route('/appointment/<int:appointment_id>/<action>', methods=['POST'])
-# @login_required
-# def handle_appointment(appointment_id, action):
-#     """老师确认/拒绝预约"""
-#     appointment = Appointment.query.get_or_404(appointment_id)
-
-#     if current_user.id != appointment.teacher_id:
-#         flash("无权操作", "danger")
-#         return redirect(url_for('index'))
-
-#     if action == 'confirm':
-#         appointment.status = 'confirmed'
-#         flash("预约已确认", "success")
-#     elif action == 'reject':
-#         appointment.status = 'rejected'
-#         # 释放时间段
-#         appointment.time_slot.is_booked = False
-#         flash("预约已拒绝", "info")
-
-#     db.session.commit()
-#     return redirect(url_for('my_appointments'))
-
-
 @app.route('/appointment/<int:appointment_id>/cancel', methods=['POST'])
 @login_required
 def cancel_appointment(appointment_id):
-    """学生撤销预约"""
+    """Cancel an appointment (student only)"""
     appointment = Appointment.query.get_or_404(appointment_id)
 
-    # 检查权限：只有预约的学生本人可以撤销
+    # Permission check: only the student who made the appointment can cancel
     if current_user.id != appointment.student_id:
-        flash("无权操作", "danger")
+        flash("Permission denied", "danger")
         return redirect(url_for('index'))
 
-    # 检查状态：只能撤销待确认或已确认的预约
+    # Status check: only confirmed appointments can be canceled
     if appointment.status != 'confirmed':
-        flash("该预约无法撤销", "warning")
+        flash("This appointment cannot be canceled", "warning")
         return redirect(url_for('my_appointments'))
 
-    # 释放时间段
+    # Release the time slot
     appointment.time_slot.is_booked = False
-    
-    # 删除预约记录或更新状态为已取消
-    # 方案A：删除记录
+
+    # Delete the appointment record
     db.session.delete(appointment)
-    
-    # 方案B：更新状态（如需保留记录）
-    # appointment.status = 'cancelled'
-    
+
     db.session.commit()
-    flash("预约已撤销", "success")
+    flash("Appointment canceled successfully", "success")
     return redirect(url_for('my_appointments'))
 
 
 @app.route('/teacher/time_slots', methods=['GET', 'POST'])
 @login_required
 def manage_time_slots():
-    """老师管理可预约时间段"""
+    """Teacher manages available time slots"""
     if current_user.role != "teacher":
-        flash("只有老师可以管理时间段", "danger")
+        flash("Only teachers can manage time slots", "danger")
         return redirect(url_for('index'))
 
     form = TimeSlotForm()
@@ -852,7 +744,7 @@ def manage_time_slots():
         date = form.date.data
         selected_slots = form.time_slots.data
 
-        # 检查是否已存在这些时间段
+        # Check for existing slots
         existing_slots = TimeSlot.query.filter_by(
             teacher_id=current_user.id,
             date=date
@@ -873,13 +765,12 @@ def manage_time_slots():
 
         if added_count > 0:
             db.session.commit()
-            flash(f"成功添加 {added_count} 个时间段", "success")
+            flash(f"Successfully added {added_count} time slots", "success")
         else:
-            flash("所选时间段已存在", "info")
+            flash("Selected time slots already exist", "info")
 
         return redirect(url_for('manage_time_slots'))
 
-    # 获取老师已设置的时间段
     my_slots = TimeSlot.query.filter_by(
         teacher_id=current_user.id
     ).order_by(TimeSlot.date.desc(), TimeSlot.time_slot).all()
@@ -931,7 +822,7 @@ def message_edit(msg_id):
 
     form = SupportMessageForm(obj=msg)
     if form.validate_on_submit():
-        # 1. update
+        # 1. update message
         msg.subject = form.subject.data.strip()
         msg.message_content = form.message_content.data.strip()
         msg.urgency = form.urgency.data
@@ -971,19 +862,19 @@ def message_delete(msg_id):
         flash("No permission")
         return redirect(url_for('index'))
 
-    # delete files
+    # delete attached files
     for f in msg.files:
         path = os.path.join(UPLOAD_FOLDER, f.stored_name)
         if os.path.exists(path):
             os.remove(path)
 
-    # delete message and files
+    # delete message and related files
     db.session.delete(msg)
     db.session.commit()
-    flash("Message and all files deleted")
+    flash("Message and all files deleted successfully")
     return redirect(url_for('index'))
 
-# delete files
+# delete single file
 @app.route('/delete/file/<int:file_id>')
 @login_required
 def delete_file_msg(file_id):
@@ -1042,7 +933,7 @@ def messages_page():
 @login_required
 def ai_assistant_page():
     if current_user.role != "student":
-        flash("Only students can use AI Assistant", "danger")
+        flash("Only students can use the AI Assistant", "danger")
         return redirect(url_for('index'))
 
     query = SupportMessage.query
@@ -1062,3 +953,272 @@ def ai_assistant_page():
             ai_summary = "No messages available to analyze."
 
     return render_template('ai_assistant.html', ai_summary=ai_summary)
+
+
+# ====================== Admin Survey Results Routes ======================
+@app.route('/admin/survey-results')
+@login_required
+def admin_survey_results():
+    """Admin survey results overview page"""
+    if current_user.role != "admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for('index'))
+
+    return render_template('admin_survey_results.html')
+
+
+@app.route('/admin/survey-results/learning')
+@login_required
+def admin_survey_results_learning():
+    """Learning survey results"""
+    if current_user.role != "admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for('index'))
+
+    # Get all learning survey responses
+    responses = NewSurveyResponse.query.filter_by(
+        survey_type='learning'
+    ).all()
+
+    if not responses:
+        flash("No learning survey data available.", "info")
+        return render_template('admin_survey_learning.html',
+                               responses=[],
+                               stats={},
+                               comments=[])
+
+    # Calculate statistics
+    total = len(responses)
+
+    # Map text values to numeric scores (1-5)
+    score_mapping = {
+        "1": 1, "Very Dissatisfied": 1,
+        "2": 2, "Dissatisfied": 2,
+        "3": 3, "Average": 3,
+        "4": 4, "Satisfied": 4,
+        "5": 5, "Very Satisfied": 5,
+        "Very Poor": 1, "Poor": 2, "Average": 3, "Good": 4, "Excellent": 5,
+        "Not Mastered": 1, "Insufficient Mastery": 2, "Partially Mastered": 3,
+        "Mostly Mastered": 4, "Completely Mastered": 5
+    }
+
+    # Initialize sums
+    course_schedule_sum = 0
+    course_quality_sum = 0
+    knowledge_mastery_sum = 0
+    valid_cs = 0
+    valid_cq = 0
+    valid_km = 0
+
+    # Collect comments
+    comments = []
+
+    for resp in responses:
+        # Calculate course schedule score
+        if resp.course_schedule and resp.course_schedule in score_mapping:
+            course_schedule_sum += score_mapping[resp.course_schedule]
+            valid_cs += 1
+
+        # Calculate course quality score
+        if resp.course_quality and resp.course_quality in score_mapping:
+            course_quality_sum += score_mapping[resp.course_quality]
+            valid_cq += 1
+
+        # Calculate knowledge mastery score
+        if resp.knowledge_mastery and resp.knowledge_mastery in score_mapping:
+            knowledge_mastery_sum += score_mapping[resp.knowledge_mastery]
+            valid_km += 1
+
+        # Collect comments
+        if resp.other_learning and resp.other_learning.strip():
+            user = User.query.get(resp.user_id)
+            comments.append({
+                'username': user.username if user else 'Unknown',
+                'comment': resp.other_learning.strip()
+            })
+
+    # Calculate averages
+    stats = {
+        'total_responses': total,
+        'course_schedule_avg': round(course_schedule_sum / valid_cs, 2) if valid_cs > 0 else 0,
+        'course_quality_avg': round(course_quality_sum / valid_cq, 2) if valid_cq > 0 else 0,
+        'knowledge_mastery_avg': round(knowledge_mastery_sum / valid_km, 2) if valid_km > 0 else 0,
+    }
+
+    return render_template('admin_survey_learning.html',
+                           responses=responses,
+                           stats=stats,
+                           comments=comments)
+
+
+@app.route('/admin/survey-results/management')
+@login_required
+def admin_survey_results_management():
+    """Management survey results"""
+    if current_user.role != "admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for('index'))
+
+    # Get all management survey responses
+    responses = NewSurveyResponse.query.filter_by(
+        survey_type='management'
+    ).all()
+
+    if not responses:
+        flash("No management survey data available.", "info")
+        return render_template('admin_survey_management.html',
+                               responses=[],
+                               stats={},
+                               comments=[])
+
+    # Calculate statistics
+    total = len(responses)
+
+    # Map text values to numeric scores (1-5)
+    score_mapping = {
+        "1": 1, "Very Dissatisfied": 1, "Very Unclean": 1, "Very Unreasonable": 1, "Very Insufficient": 1,
+        "2": 2, "Dissatisfied": 2, "Not Clean": 2, "Unreasonable": 2, "Insufficient": 2,
+        "3": 3, "Average": 3, "Average": 3, "Average": 3, "Average": 3,
+        "4": 4, "Satisfied": 4, "Clean": 4, "Reasonable": 4, "Rich": 4,
+        "5": 5, "Very Satisfied": 5, "Very Clean": 5, "Very Reasonable": 5, "Very Rich": 5
+    }
+
+    # Initialize sums
+    campus_cleanliness_sum = 0
+    cafeteria_sum = 0
+    holiday_arrangement_sum = 0
+    student_activities_sum = 0
+    valid_cc = 0
+    valid_caf = 0
+    valid_ha = 0
+    valid_sa = 0
+
+    # Collect comments
+    comments = []
+
+    for resp in responses:
+        # Calculate campus cleanliness score
+        if resp.campus_cleanliness and resp.campus_cleanliness in score_mapping:
+            campus_cleanliness_sum += score_mapping[resp.campus_cleanliness]
+            valid_cc += 1
+
+        # Calculate cafeteria score
+        if resp.cafeteria and resp.cafeteria in score_mapping:
+            cafeteria_sum += score_mapping[resp.cafeteria]
+            valid_caf += 1
+
+        # Calculate holiday arrangement score
+        if resp.holiday_arrangement and resp.holiday_arrangement in score_mapping:
+            holiday_arrangement_sum += score_mapping[resp.holiday_arrangement]
+            valid_ha += 1
+
+        # Calculate student activities score
+        if resp.student_activities and resp.student_activities in score_mapping:
+            student_activities_sum += score_mapping[resp.student_activities]
+            valid_sa += 1
+
+        # Collect comments
+        if resp.other_management and resp.other_management.strip():
+            user = User.query.get(resp.user_id)
+            comments.append({
+                'username': user.username if user else 'Unknown',
+                'comment': resp.other_management.strip()
+            })
+
+    # Calculate averages
+    stats = {
+        'total_responses': total,
+        'campus_cleanliness_avg': round(campus_cleanliness_sum / valid_cc, 2) if valid_cc > 0 else 0,
+        'cafeteria_avg': round(cafeteria_sum / valid_caf, 2) if valid_caf > 0 else 0,
+        'holiday_arrangement_avg': round(holiday_arrangement_sum / valid_ha, 2) if valid_ha > 0 else 0,
+        'student_activities_avg': round(student_activities_sum / valid_sa, 2) if valid_sa > 0 else 0,
+    }
+
+    return render_template('admin_survey_management.html',
+                           responses=responses,
+                           stats=stats,
+                           comments=comments)
+
+
+@app.route('/admin/survey-results/teaching')
+@login_required
+def admin_survey_results_teaching():
+    """Teaching survey results"""
+    if current_user.role != "admin":
+        flash("Access denied. Admin only.", "danger")
+        return redirect(url_for('index'))
+
+    # Get all teaching survey responses
+    responses = NewSurveyResponse.query.filter_by(
+        survey_type='teaching'
+    ).all()
+
+    if not responses:
+        flash("No teaching survey data available.", "info")
+        return render_template('admin_survey_teaching.html',
+                               responses=[],
+                               stats={},
+                               comments=[],
+                               dissatisfaction_comments=[])
+
+    # Calculate statistics
+    total = len(responses)
+
+    # Initialize counters
+    teacher_responsibility_yes = 0
+    teaching_satisfaction_yes = 0
+    teacher_responsibility_no = 0
+    teaching_satisfaction_no = 0
+
+    # Collect comments
+    comments = []
+    dissatisfaction_comments = []
+
+    for resp in responses:
+        # Count teacher responsibility
+        if resp.teacher_responsibility == 'yes':
+            teacher_responsibility_yes += 1
+        elif resp.teacher_responsibility == 'no':
+            teacher_responsibility_no += 1
+
+        # Count teaching satisfaction
+        if resp.teaching_satisfaction == 'yes':
+            teaching_satisfaction_yes += 1
+        elif resp.teaching_satisfaction == 'no':
+            teaching_satisfaction_no += 1
+
+        # Collect dissatisfaction reasons
+        if resp.dissatisfaction_reason and resp.dissatisfaction_reason.strip():
+            user = User.query.get(resp.user_id)
+            dissatisfaction_comments.append({
+                'username': user.username if user else 'Unknown',
+                'comment': resp.dissatisfaction_reason.strip()
+            })
+
+        # Collect other comments
+        if resp.other_teaching and resp.other_teaching.strip():
+            user = User.query.get(resp.user_id)
+            comments.append({
+                'username': user.username if user else 'Unknown',
+                'comment': resp.other_teaching.strip()
+            })
+
+    # Calculate percentages
+    tr_yes_pct = round((teacher_responsibility_yes / total) * 100, 1) if total > 0 else 0
+    tr_no_pct = round((teacher_responsibility_no / total) * 100, 1) if total > 0 else 0
+    ts_yes_pct = round((teaching_satisfaction_yes / total) * 100, 1) if total > 0 else 0
+    ts_no_pct = round((teaching_satisfaction_no / total) * 100, 1) if total > 0 else 0
+
+    stats = {
+        'total_responses': total,
+        'teacher_responsibility_yes_pct': tr_yes_pct,
+        'teacher_responsibility_no_pct': tr_no_pct,
+        'teaching_satisfaction_yes_pct': ts_yes_pct,
+        'teaching_satisfaction_no_pct': ts_no_pct,
+    }
+
+    return render_template('admin_survey_teaching.html',
+                           responses=responses,
+                           stats=stats,
+                           comments=comments,
+                           dissatisfaction_comments=dissatisfaction_comments)

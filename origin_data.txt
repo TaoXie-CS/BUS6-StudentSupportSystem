@@ -19,11 +19,22 @@ u3.set_password("123456")
 u4 = User(username="jane", email="jane@school.com", role="student", school_id="S2026002")
 u4.set_password("123456")
 
-db.session.add_all([u1, u2, u3, u4])
+# ========================
+# 2. admin：Ms.Chen (password:123456)
+# ========================
+u5 = User(
+    username="mschen",
+    email="mschen.school@gmail.com",
+    role="admin",
+    school_id="A2026001"
+)
+u5.set_password("123456")
+
+db.session.add_all([u1, u2, u3, u4, u5])
 db.session.commit()
 
 # ========================
-# 2. messages：4 messages
+# 3. messages：4 messages
 # ========================
 msg1 = SupportMessage(
     subject="Python Midterm Exam Details",
@@ -76,6 +87,6 @@ db.session.commit()
 print("success！")
 print("teacher：Sam, Lora")
 print("student：Tom, Jane")
+print("admin：Ms.Chen (mschen.school@gmail.com)")
 print("message：4 test messages")
-print("files：4 test attachments (linked to messages)")
 exit()
