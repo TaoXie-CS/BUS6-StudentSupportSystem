@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+    <h1 style="text-align:center; font-size: 28px; font-weight: bold; color: #222; margin-bottom: 10px;">
+        School Management Survey Results
+    </h1>
+    <p style="text-align:center; color:#666; margin-bottom: 40px;">
+        Statistics based on student feedback (Scale: 1-5)
+    </p>
+
+    {% if not responses %}
+    <div style="text-align:center; padding: 40px; background: #f8f9fa; border-radius: 8px;">
+        <p style="color:#6c757d; font-size: 16px;">No survey data available yet.</p>
+    </div>
+    {% else %}
+
+    <!-- Statistics Overview -->
+    <div style="background: #ffffff; border-radius: 10px; padding: 25px; margin-bottom: 30px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <h3 style="margin:0 0 20px 0; font-size: 20px; color:#28a745;">Survey Statistics</h3>
+
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 20px;">
+            <div style="text-align:center;">
+                <div style="font-size: 24px; font-weight: bold; color:#007bff;">{{ stats.total_responses }}</div>
+                <div style="font-size: 14px; color:#666;">Total Responses</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size: 24px; font-weight: bold; color:#28a745;">{{ stats.campus_cleanliness_avg }}/5</div>
+                <div style="font-size: 12px; color:#666;">Campus Cleanliness</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size: 24px; font-weight: bold; color:#28a745;">{{ stats.cafeteria_avg }}/5</div>
+                <div style="font-size: 12px; color:#666;">Cafeteria</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size: 24px; font-weight: bold; color:#28a745;">{{ stats.holiday_arrangement_avg }}/5</div>
+                <div style="font-size: 12px; color:#666;">Holiday Arrangement</div>
+            </div>
+            <div style="text-align:center;">
+                <div style="font-size: 24px; font-weight: bold; color:#28a745;">{{ stats.student_activities_avg }}/5</div>
+                <div style="font-size: 12px; color:#666;">Student Activities</div>
+            </div>
+        </div>
+
+        <!-- Detailed Average Scores -->
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 6px;">
+            <h4 style="margin:0 0 15px 0; color:#495057;">Average Scores by Category:</h4>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <div>
+                    <strong>Campus Cleanliness:</strong> {{ stats.campus_cleanliness_avg }}/5
+                    <div style="height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 5px;">
+                        <div style="width: {{ stats.campus_cleanliness_avg * 20 }}%; height: 100%; background: #28a745; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div>
+                    <strong>Cafeteria:</strong> {{ stats.cafeteria_avg }}/5
+                    <div style="height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 5px;">
+                        <div style="width: {{ stats.cafeteria_avg * 20 }}%; height: 100%; background: #17a2b8; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div>
+                    <strong>Holiday Arrangement:</strong> {{ stats.holiday_arrangement_avg }}/5
+                    <div style="height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 5px;">
+                        <div style="width: {{ stats.holiday_arrangement_avg * 20 }}%; height: 100%; background: #6f42c1; border-radius: 4px;"></div>
+                    </div>
+                </div>
+                <div>
+                    <strong>Student Activities:</strong> {{ stats.student_activities_avg }}/5
+                    <div style="height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 5px;">
+                        <div style="width: {{ stats.student_activities_avg * 20 }}%; height: 100%; background: #fd7e14; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Section -->
+    {% if comments %}
+    <div style="background: #ffffff; border-radius: 10px; padding: 25px; margin-top: 30px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e9ecef;">
+        <h3 style="margin:0 0 20px 0; font-size: 20px; color:#dc3545;">
+            Student Comments ({{ comments|length }})
+        </h3>
+
+        <div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+            {% for comment in comments %}
+            <div style="padding: 15px; margin-bottom: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #28a745;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <strong style="color:#495057;">{{ comment.username }}</strong>
+                </div>
+                <div style="color:#6c757d; line-height: 1.5;">{{ comment.comment }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div style="text-align:center; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-top: 30px;">
+        <p style="color:#6c757d;">No comments provided by students.</p>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    <!-- Navigation Buttons -->
+    <div style="display: flex; justify-content: space-between; margin-top: 40px;">
+        <a href="{{ url_for('admin_survey_results') }}"
+           style="padding: 10px 20px; background: #f8f9fa; color: #6c757d; border-radius: 6px; text-decoration: none;">
+            ← Back to Surveys
+        </a>
+        <a href="{{ url_for('index') }}"
+           style="padding: 10px 20px; background: #f8f9fa; color: #6c757d; border-radius: 6px; text-decoration: none;">
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
