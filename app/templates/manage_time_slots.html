@@ -2,11 +2,21 @@
 
 {% block content %}
 <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-    <h1>管理预约时间段</h1>
-
-    <!-- 添加新时间段表单 -->
+    <h1 style="padding-left: 20px;">Manage Appointment Time Slots</h1>
+    <div style="margin-bottom: 20px; padding-left: 20px;">
+        <button onclick="history.back()" 
+                style="padding: 8px 16px; margin-right: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+            ← back
+        </button>
+        <a href="{{ url_for('index') }}" 
+            style="padding: 8px 16px; display: inline-block; background: #2196F3; color: white; text-decoration: none; border-radius: 4px;">
+            🏠 Home
+        </a>
+    </div>
+</div>
+    <!-- Add New Time Slot Form -->
     <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-        <h2>添加可用时间段</h2>
+        <h2>Add Available Time Slots</h2>
         <form method="POST" action="{{ url_for('manage_time_slots') }}">
             {{ form.hidden_tag() }}
 
@@ -43,8 +53,8 @@
         </form>
     </div>
 
-    <!-- 已设置的时间段列表 -->
-    <h2>已设置的时间段</h2>
+    <!-- Set Time Slots List -->
+    <h2>Your Time Slots</h2>
     {% if slots %}
         <div style="margin-top: 20px;">
             {% set current_date = namespace(value='') %}
@@ -53,7 +63,7 @@
                     {% set current_date.value = slot.date.strftime('%Y-%m-%d') %}
                     <div style="margin-top: 25px; margin-bottom: 10px;">
                         <h3 style="color: #2196F3; border-bottom: 2px solid #2196F3; padding-bottom: 5px;">
-                            {{ slot.date.strftime('%Y年%m月%d日') }} {{ ['周一', '周二', '周三', '周四', '周五', '周六', '周日'][slot.date.weekday()] }}
+                            {{ slot.date.strftime('%Y-%m-%d') }} {{ ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][slot.date.weekday()] }}
                         </h3>
                     </div>
                 {% endif %}
@@ -61,11 +71,11 @@
                 <div style="display: inline-block; margin: 5px;">
                     {% if slot.is_booked %}
                     <span style="display: inline-block; padding: 10px 20px; border-radius: 20px; font-size: 14px; background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;">
-                        {{ slot.time_slot }} (已预约)
+                        {{ slot.time_slot }} (Booked)
                     </span>
                     {% else %}
                     <span style="display: inline-block; padding: 10px 20px; border-radius: 20px; font-size: 14px; background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;">
-                        {{ slot.time_slot }} (可预约)
+                        {{ slot.time_slot }} (Available)
                     </span>
                     {% endif %}
                 </div>
@@ -74,8 +84,8 @@
     {% else %}
         <div style="text-align: center; padding: 40px; color: #666; background: #fafafa; border-radius: 8px; margin-top: 20px;">
             <div style="font-size: 48px; margin-bottom: 15px;">📅</div>
-            <p>您还没有设置任何可预约时间段</p>
-            <p style="font-size: 14px;">请在上方添加时间段，学生才能向您发起预约</p>
+            <p>You haven't set any available time slots</p>
+            <p style="font-size: 14px;">Please add time slots above so students can make appointments with you</p>
         </div>
     {% endif %}
 </div>
@@ -89,7 +99,7 @@ input[type="checkbox"] {
 </style>
 
 <script>
-// 设置日期选择器的最小值为今天
+// Set date picker minimum value to today
 document.addEventListener('DOMContentLoaded', function() {
     const dateInput = document.querySelector('input[type="date"]');
     if (dateInput) {

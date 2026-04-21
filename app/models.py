@@ -112,7 +112,7 @@ class NewSurveyResponse(db.Model):
 
 # ===================== Appointment System Models =====================
 class TimeSlot(db.Model):
-    """老师可预约时间段模型"""
+    """Teacher available time slot model"""
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     teacher_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
     date: so.Mapped[date] = so.mapped_column(sa.Date, nullable=False)
@@ -132,7 +132,7 @@ class TimeSlot(db.Model):
 
 
 class Appointment(db.Model):
-    """预约记录模型"""
+    """Appointment record model"""
     id: so.Mapped[int] = so.mapped_column(primary_key=True)
     student_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)
     teacher_id: so.Mapped[int] = so.mapped_column(sa.ForeignKey("user.id"), nullable=False)

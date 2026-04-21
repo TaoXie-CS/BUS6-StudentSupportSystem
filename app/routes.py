@@ -693,13 +693,13 @@ def submit_appointment():
 def my_appointments():
     """View my appointments"""
     if current_user.role == "teacher":
-        appointments = Appointment.query.filter_by(
-            teacher_id=current_user.id
-        ).order_by(Appointment.created_at.desc()).all()
+        appointments = Appointment.query.join(TimeSlot).filter(
+            Appointment.teacher_id == current_user.id
+        ).order_by(TimeSlot.date.asc(), TimeSlot.time_slot.asc()).all()
     else:
-        appointments = Appointment.query.filter_by(
-            student_id=current_user.id
-        ).order_by(Appointment.created_at.desc()).all()
+        appointments = Appointment.query.join(TimeSlot).filter(
+            Appointment.student_id == current_user.id
+        ).order_by(TimeSlot.date.asc(), TimeSlot.time_slot.asc()).all()
     return render_template('my_appointments.html', appointments=appointments)
 
 
