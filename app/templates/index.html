@@ -52,20 +52,17 @@
             <div style="display:flex; flex-direction:column; gap:14px;">
                 <a href="{{ url_for('messages_page') }}"
                    style="padding:16px; text-align:center; background:#e6f0ff; color:#007bff; border-radius:8px; font-weight:bold; text-decoration:none;">
+                    {% if current_user.role == 'teacher' %}
+                    Manage Messages
+                    {% else %}
                     View Messages
+                    {% endif %}
                 </a>
 
                 {% if current_user.role == 'student' %}
                 <a href="{{ url_for('ai_assistant_page') }}"
                    style="padding:16px; text-align:center; background:#f8fcff; color:#17a2b8; border:1px solid #17a2b8; border-radius:8px; font-weight:bold; text-decoration:none;">
                     AI Assistant
-                </a>
-                {% endif %}
-
-                {% if current_user.role == 'teacher' %}
-                <a href="{{ url_for('new_message') }}"
-                   style="padding:16px; text-align:center; background:#f8fcff; color:#007bff; border:1px solid #007bff; border-radius:8px; font-weight:bold; text-decoration:none;">
-                    + New Message
                 </a>
                 {% endif %}
             </div>

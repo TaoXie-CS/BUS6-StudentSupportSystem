@@ -7,6 +7,16 @@
 
     <h2 style="font-size: 26px; font-weight: bold; color: #222; margin-bottom: 25px;">📩 Messages</h2>
 
+    {% if current_user.role == 'teacher' %}
+    <!-- 老师：只显示 New Message -->
+    <div style="margin-bottom: 20px;">
+        <a href="{{ url_for('new_message') }}"
+           style="display:block; padding:12px; background:#007bff; color:white; text-align:center; border-radius:6px; font-weight:bold; text-decoration:none;">
+            + New Message
+        </a>
+    </div>
+    {% else %}
+    <!-- 学生：显示筛选 -->
     <form method="GET" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
         <input type="text" name="search" placeholder="Search subject..."
                value="{{ search }}"
@@ -35,6 +45,7 @@
             </a>
         </div>
     </form>
+    {% endif %}
 
     <div style="max-height: 400px; overflow-y:auto; padding-right:6px;">
         {% if student_infos %}
