@@ -107,7 +107,7 @@ class NewSurveyResponse(db.Model):
     )
 
     def __repr__(self):
-        return f"<SurveyTemplate {self.title}>"
+        return f"<NewSurveyResponse id={self.id} type={self.survey_type} user_id={self.user_id}>"
 
 
 # ===================== Appointment System Models =====================
@@ -152,6 +152,8 @@ class Appointment(db.Model):
 
     def __repr__(self):
         return f'<Appointment {self.id} - {self.status}>'
+
+
 # ===================== End of Appointment System =====================
 
 # Message read status (student view tracking)
