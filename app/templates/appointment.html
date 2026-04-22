@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+<div>
     <h1>Appointment Service</h1>
     <div style="margin-bottom: 20px;">
-        <button onclick="history.back()" 
+        <button onclick="history.back()" id="btn-back"
                 style="padding: 8px 16px; margin-right: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
             ← Back
         </button>
@@ -50,8 +50,7 @@
         <h2>Step 3: Select Date</h2>
         <div style="margin: 20px 0;">
             <label for="date-picker" style="display: block; margin-bottom: 10px; font-weight: bold;">Select Date:</label>
-            <input type="date" id="date-picker" style="width: 100%; padding: 10px; font-size: 16px;" min="">
-            <p id="date-loading" style="color: #666; display: none;">Loading available dates...</p>
+            <input type="text" id="date-picker" style="width: 100%; padding: 10px; font-size: 16px;" placeholder="Select date...">            <p id="date-loading" style="color: #666; display: none;">Loading available dates...</p>
             <p id="no-dates-msg" style="color: #f44336; display: none;">This teacher has no available dates</p>
         </div>
         <button onclick="backToStep2()" style="padding: 10px 20px; margin-right: 10px;">Previous</button>
@@ -235,23 +234,29 @@ async function loadAvailableDates(teacherId) {
 
         loadingMsg.style.display = 'none';
 
-        if (dates.length === 0) {
+                if (dates.length === 0) {
             noDatesMsg.style.display = 'block';
-            datePicker.disabled = true;
         } else {
-            datePicker.disabled = false;
-            // Set minimum date to today
-            const today = new Date().toISOString().split('T')[0];
-            datePicker.min = today;
-
-            // Listen for date selection
-            datePicker.onchange = async () => {
-                if (datePicker.value) {
-                    appointmentData.date = datePicker.value;
-                    await loadTimeSlots(appointmentData.teacherId, appointmentData.date);
-                    showStep(4);
+            noDatesMsg.style.display = 'none';
+            
+            // Destroy old flatpickr instance if it exists
+            if (datePicker._flatpickr) {
+                datePicker._flatpickr.destroy();
+            }
+            
+            flatpickr(datePicker, {
+                minDate: "today",
+                enable: dates,
+                dateFormat: "Y-m-d",
+                placeholder: "Select date...",
+                onChange: async function(selectedDates, dateStr) {
+                    if (dateStr) {
+                        appointmentData.date = dateStr;
+                        await loadTimeSlots(appointmentData.teacherId, dateStr);
+                        showStep(4);
+                    }
                 }
-            };
+            });
         }
     } catch (error) {
         console.error('Failed to load available dates:', error);
@@ -342,6 +347,9 @@ async function submitAppointment() {
             // Show success message
             document.querySelectorAll('.step-section').forEach(s => s.style.display = 'none');
             document.getElementById('success-message').style.display = 'block';
+            // Hide back button on success page as well
+            const backBtn = document.getElementById('btn-back');
+            if (backBtn) backBtn.style.display = 'none';
         } else {
             alert(result.message || 'Appointment failed, please try again');
         }
@@ -356,6 +364,12 @@ function showStep(stepNum) {
     document.querySelectorAll('.step-section').forEach((section, index) => {
         section.style.display = (index + 1 === stepNum) ? 'block' : 'none';
     });
+    
+    // Step 1 shows both buttons; Steps 2-5 hide the Back button
+    const backBtn = document.getElementById('btn-back');
+    if (backBtn) {
+        backBtn.style.display = (stepNum === 1) ? 'inline-block' : 'none';
+    }
 }
 
 // Back step functions
@@ -364,4 +378,6 @@ function backToStep2() { showStep(2); }
 function backToStep3() { showStep(3); }
 function backToStep4() { showStep(4); }
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 {% endblock %}

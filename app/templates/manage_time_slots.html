@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
-    <h1 style="padding-left: 20px;">Manage Appointment Time Slots</h1>
-    <div style="margin-bottom: 20px; padding-left: 20px;">
+<div style="padding: 20px;">
+    <h1>Manage Appointment Time Slots</h1>
+    <div style="margin-bottom: 20px;">
         <button onclick="history.back()" 
                 style="padding: 8px 16px; margin-right: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
             ← back
@@ -22,7 +22,7 @@
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-weight: bold;">{{ form.date.label }}</label>
-                {{ form.date(style="width: 100%; padding: 10px; font-size: 16px;", min=today) }}
+                {{ form.date(style="width: 100%; padding: 10px; font-size: 16px;", type="text", placeholder="Select date...") }}
                 {% if form.date.errors %}
                     <div style="color: #f44336; margin-top: 5px;">
                         {% for error in form.date.errors %}{{ error }}{% endfor %}
@@ -98,14 +98,12 @@ input[type="checkbox"] {
 }
 </style>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-// Set date picker minimum value to today
-document.addEventListener('DOMContentLoaded', function() {
-    const dateInput = document.querySelector('input[type="date"]');
-    if (dateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.min = today;
-    }
+flatpickr("#date", {
+    minDate: "today",
+    dateFormat: "Y-m-d"
 });
 </script>
 {% endblock %}

@@ -666,6 +666,10 @@ def submit_appointment():
     if not time_slot or time_slot.is_booked:
         return jsonify({'success': False, 'message': 'This time slot is already taken'})
 
+    # Check if the inspection period has expired.
+    if time_slot.date < date.today():
+        return jsonify({'success': False, 'message': 'This time slot has expired'})
+
     # Create appointment record
     appointment = Appointment(
         student_id=current_user.id,
