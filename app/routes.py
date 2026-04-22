@@ -177,89 +177,6 @@ def new_message():
     return render_template("new_message.html", form=form)
 
 
-# List page: Display all messages in descending order of priority
-@login_required
-def listing_messages():
-    # In descending order of priority (with high priority first)
-    messages = SupportMessage.query.order_by(SupportMessage.priority.desc()).all()
-    print("Number of messages retrieved：", len(messages))
-    print("Message details：", messages)
-    return render_template('listing.html', students=messages)
-
-
-# Search page: Search for messages by teacher email
-@login_required
-def search_messages():
-    email = request.args.get("email", "").strip().lower()
-    course_name = request.args.get("course_name", "").strip().lower()
-    message_title = request.args.get("message_title", "").strip().lower()
-    query = SupportMessage.query
-
-    # Fuzzy search conditions
-    if email:
-        query = query.filter(SupportMessage.teacher_email.ilike(f"%{email}%"))
-    if course_name:
-        query = query.filter(SupportMessage.course_name.ilike(f"%{course_name}%"))
-    if message_title:
-        query = query.filter(SupportMessage.message_title.ilike(f"%{message_title}%"))
-
-    results = query.order_by(SupportMessage.priority.desc()).all()
-
-    # Filter high-priority messages (≥8)
-    high_priority = query.filter(SupportMessage.priority >= 8).all()
-
-    return render_template(
-        'searching.html',
-        results=results,
-        high=high_priority,
-        email=email,
-        course_name=course_name,
-        message_title=message_title
-    )
-
-
-# Advanced search: by priority/ranking/average score (priority)
-@login_required
-def more_search():
-    query = SupportMessage.query
-    # Filter by priority (high/medium/low)
-    priority_level = request.args.get("priority", "")
-
-    sort_by = request.args.get("sort", "")
-
-    # Priority filtering option
-    if priority_level == 'high':
-        query = query.filter(SupportMessage.priority >= 8)
-    elif priority_level == 'medium':
-        query = query.filter(SupportMessage.priority.between(4, 7))
-    elif priority_level == 'low':
-        query = query.filter(SupportMessage.priority <= 3)
-
-    # Sorting option
-    if sort_by == "priority_high":
-        query = query.order_by(SupportMessage.priority.desc())
-    elif sort_by == "priority_low":
-        query = query.order_by(SupportMessage.priority.asc())
-    elif sort_by == "newest":
-        query = query.order_by(SupportMessage.publish_date.desc())
-
-    results = query.all()
-
-    # Calculate average priority
-    try:
-        avg_priority = db.session.query(func.avg(SupportMessage.priority)).scalar()
-        avg_priority_final = round(avg_priority, 0) if avg_priority else 0
-    except:
-        avg_priority_final = 0
-
-    return render_template(
-        'further_search.html',
-        results=results,
-        status=priority_level,
-        order=sort_by,
-        results1_final=avg_priority_final
-    )
-
 # ====================== FILE UPLOAD / DOWNLOAD / DELETE ======================
 
 
@@ -562,14 +479,6 @@ def reset_survey():
     session.pop('survey_type', None)
     flash("Survey progress reset. Please start over.", "info")
     return redirect(url_for('survey_basic_info'))
-
-
-@app.route('/survey_results')
-@login_required
-def survey_results():
-    # Survey results are not available to anyone
-    flash("Survey results are not available at this time.", "danger")
-    return redirect(url_for('index'))
 
 # ====================== End of Modified Survey System ======================
 # ====================== Appointment System Routes ======================
