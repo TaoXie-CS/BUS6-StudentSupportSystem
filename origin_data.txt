@@ -30,7 +30,13 @@ u5 = User(
 )
 u5.set_password("123456")
 
-db.session.add_all([u1, u2, u3, u4, u5])
+u6 = User(username="tim", email="tim@school.com", role="teacher", school_id="T2026003", teacher_type="wellbeing_adviser")
+u6.set_password("123456")
+
+u7 = User(username="amy", email="amy@school.com", role="teacher", school_id="T2026004", teacher_type="careers_adviser")
+u7.set_password("123456")
+
+db.session.add_all([u1, u2, u3, u4, u5,u6, u7 ])
 db.session.commit()
 
 # ========================
@@ -72,7 +78,7 @@ msg3 = SupportMessage(
 msg4 = SupportMessage(
     subject="ML Assignment Submission Urgent Update",
     message_content="Urgent: The ML model training server will undergo maintenance this weekend. Please submit your assignments before Saturday midnight. If you face issues, contact Lora immediately via email.",
-    urgency="urgent", # 调成 urgent 看看 AI 反应
+    urgency="urgent",
     teacher_email="lora@school.com",
     teacher_name="lora",
     teacher_school_id="T2026002",
