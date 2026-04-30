@@ -6,6 +6,7 @@ A comprehensive student support platform designed to facilitate communication be
 - [Tools & Technologies](#tools--technologies)
 - [Prerequisites](#prerequisites)
 - [How to Run the Project](#how-to-run-the-project)
+- [User Registration & Login Notes](#how-to-register-and-login)
 - [Testing the Project](#testing-the-project)
 - [UML Diagrams](#diagrams)
 - [Troubleshooting](#troubleshooting)
@@ -46,43 +47,89 @@ You can set up the project in **PyCharm** .
    git clone -b dev2 https://github.com/TaoXie-CS/BUS6-StudentSupportSystem
    cd BUS6-StudentSupportSystem
 2. **Open Project in PyCharm**
+
    Launch PyCharm → Click "Open" → Select the BUS6-StudentSupportSystem folder.
 3. **Set Up Python Interpreter**
+
    Go to File > Settings > Project: BUS6-StudentSupportSystem > Python Interpreter (Windows)
+
    Or PyCharm > Settings > Project: BUS6-StudentSupportSystem > Python Interpreter (Mac)
+
    Click the Add (+) button → Select "New Virtual Environment"
+
    Choose "Python Interpreter" → Select the appropriate Python version (3.8+)
+
    Click "OK" to create and set the virtual environment as the project interpreter.
 4. **Install Dependencies**
-   Open the PyCharm Terminal (bottom panel) and run:
-   pip install -r requirements.txt
-   
-   Then initialize the database:
-   flask shell
-   db.create_all()
 
+   Open the PyCharm Terminal (bottom panel) and run:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   Then initialize the database:
+   ```bash
+   flask shell
+   ```
+   ```bash
+   db.create_all()
+   ```
    Copy and paste all content from origin_data.txt into the Flask shell to initialize the data.
 5. **Open Local LLM (for ai-assistant)**
+
    Download and launch LM Studio.
 
    Install and load the following model:
+
    Model: tinyllama-1.1b-chat-v1.0
+
    Version: Q4_K_M
 
    Make sure the model status shows Running before starting the system.
 6. **Run Project**
    In the PyCharm Terminal, run:
+   ```bash
    flask run
-   
+   ```
    Open your browser and visit:
    http://127.0.0.1:5000
 
+
+## User Registration & Login Notes
+When you first use the system, you will need to register an account:
+1. **Admin Account**
+
+   The administrator account has already been created in the initial data, login using:
+
+   Email: mschen.school@gmail.com
+
+   Password: 123456
+
+2. **Registration Rules**
+
+   Required fields:
+
+   Username, Email, School ID, Password, Role
+
+   Role-specific school_id format:
+
+   For teachers: school_id must start with T (e.g. T2026010)
+
+   For students: school_id must start with S (e.g. S2026010)
+
+   Teachers only: Must also choose a teacher_type (e.g. Lecturer, Careers advisor)
+
+3. **Login Method**
+
+   After registration, you will log in using your email address and password.
+
+
    
 ## Testing the Project
-To run the test cases and verify system functionality:
-All test files are located in the tests/ folder.
-To run a specific test file, use the following command in the project root directory:
-   python -m pytest "tests/ai_assistant_tests/test_ai_assistant.py" -v
+  To run the test cases and verify system functionality:
+  All test files are located in the `tests/` folder. To run a specific test file, use the following command in the project root directory:
+  ```bash
+  python -m pytest "tests/ai_assistant_tests/test_ai_assistant.py" -v
+  ```
    
 
 
@@ -97,8 +144,14 @@ If you encounter errors while running the project:
 When facing **sqlalchemy.exc.OperationalError**:
 1. Stop the project
 2. Delete the `app.db` file
-3. Run `flask shell` in the terminal
-4. Run `db.create_all()`
+3. Run the following command in the terminal: 
+   ```bash 
+   flask shell
+   ```
+4. Inside the Flask shell, run:
+   ```bash
+   db.create_all()
+   ```
 5. Copy and paste all content from `origin_data.txt` to initialize the data
 
 
