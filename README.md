@@ -43,7 +43,7 @@ You can set up the project in **PyCharm** .
 1. **Clone the Repository**  
    Open Git Bash or Terminal, run the command to clone the project:
    ```bash
-   git clone -b main https://github.com/TaoXie-CS/BUS6-StudentSupportSystem
+   git clone -b dev2 https://github.com/TaoXie-CS/BUS6-StudentSupportSystem
    cd BUS6-StudentSupportSystem
 2. **Open Project in PyCharm**
    Launch PyCharm → Click "Open" → Select the BUS6-StudentSupportSystem folder.
